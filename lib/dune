@@ -1,0 +1,4 @@
+(library
+ (name current_albatross)
+ (public_name current-albatross)
+ (libraries ctypes))

@@ -1,0 +1,10 @@
+(tests
+ (libraries iptables alcotest)
+ (modules nat)
+ (names nat))
+
+(executable
+ (name test)
+ (modules test)
+ (public_name test)
+ (libraries iptables logs.fmt))
