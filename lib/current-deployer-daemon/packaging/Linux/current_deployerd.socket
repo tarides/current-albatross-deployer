@@ -1,0 +1,12 @@
+[Unit]
+Description=Current-deployer daemon socket
+PartOf=current_deployerd.service
+
+[Socket]
+ListenStream=%t/current_deployerd/current_deployerd.sock
+SocketGroup=albatross
+SocketMode=0660
+Accept=no
+
+[Install]
+WantedBy=sockets.target

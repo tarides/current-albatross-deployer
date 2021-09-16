@@ -202,7 +202,7 @@ module Wire = struct
 
   let create_socket =
     let open Lwt.Infix in
-    let name = "/tmp/current-deployerd.sock" in
+    let name = "/var/run/current-deployer/current-deployerd.sock" in
     (Lwt_unix.file_exists name >>= function
      | true -> Lwt_unix.unlink name
      | false -> Lwt.return_unit)

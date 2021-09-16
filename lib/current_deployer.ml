@@ -372,9 +372,9 @@ module E = struct
           (fun () ->
             Client.Deployments.create ~socket
               {
+                (* todo: a bit flaky here *)
                 Current_deployer_api.Types.DeploymentInfo.ip =
-                  { tag = "service"; (* tag is useless*)
-                                     ip };
+                  { tag = service; ip };
                 ports;
                 name = service;
               }
@@ -427,15 +427,9 @@ module E = struct
         StringSet.of_list (List.map (fun t -> t.Deployment.service) roots)
       in
       let perform ~socket =
-        Current.Job.log job "Stage 1: remove unused deployments";
         (* Step 1: daemon: remove unused deployments *)
         let** deployments =
-          Client.Deployments.list ~socket ()
-          |> Lwt_result.map_err (function
-               | `Exception -> `Msg "exception occured during request"
-               | `Eof -> `Msg "encountered EOF during request"
-               | `Toomuch -> `Msg "got too much during request"
-               | `Parse m -> `Msg ("ASN parse error: " ^ m))
+          Client.Deployments.list ~socket () |> Lwt.map remap_errors
         in
         let deployments_to_keep, deployments_to_remove =
           List.partition
@@ -443,7 +437,14 @@ module E = struct
               StringSet.mem deployment.name deployed_services)
             deployments
         in
+        Current.Job.log job "Roots:";
+        List.iter
+          (fun (deployment : Current_deployer_api.Types.DeploymentInfo.t) ->
+            Current.Job.log job " - %s @%a (%s)" deployment.name Ipaddr.V4.pp
+              deployment.ip.ip deployment.ip.tag)
+          deployments_to_keep;
 
+        Current.Job.log job "Stage 1: remove unused deployments";
         let* () =
           Lwt_list.iter_s
             (fun (deployment : Current_deployer_api.Types.DeploymentInfo.t) ->
@@ -452,26 +453,20 @@ module E = struct
               |> Lwt.map ignore)
             deployments_to_remove
         in
-        let tags_to_keep =
+        let ips_to_keep =
           List.map
-            (fun (d : Current_deployer_api.Types.DeploymentInfo.t) -> d.ip.tag)
+            (fun (d : Current_deployer_api.Types.DeploymentInfo.t) ->
+              Ipaddr.V4.to_string d.ip.ip)
             deployments_to_keep
           |> StringSet.of_list
         in
 
         (* Step 1.5: collect IPs and unikernel tags *)
-        let** ips =
-          Client.IpManager.list ~socket ()
-          |> Lwt_result.map_err (function
-               | `Exception -> `Msg "exception occured during request"
-               | `Eof -> `Msg "encountered EOF during request"
-               | `Toomuch -> `Msg "got too much during request"
-               | `Parse m -> `Msg ("ASN parse error: " ^ m))
-        in
+        let** ips = Client.IpManager.list ~socket () |> Lwt.map remap_errors in
         let ips_to_remove =
           List.filter
             (fun (ip : Current_deployer_api.Types.Ip.t) ->
-              not (StringSet.mem ip.tag tags_to_keep))
+              not (StringSet.mem (Ipaddr.V4.to_string ip.ip) ips_to_keep))
             ips
         in
         let removed_ips_tags =

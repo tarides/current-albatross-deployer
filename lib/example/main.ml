@@ -167,7 +167,7 @@ let pipeline () =
             "--ipv4=" ^ Ipaddr.V4.to_string ip ^ "/24";
             "--ipv4-gateway=10.0.0.1";
             "-l";
-            "info";
+            "error";
           ]);
       memory = 256;
       network = "br1";
