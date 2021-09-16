@@ -82,14 +82,9 @@ module Args = struct
 end
 
 module Port = struct
-  type t =
-    | S of { source : int; target : int }
-    | M of { sources : int * int; targets : int * int }
+  type t = { source : int; target : int }
 
-  let pp f = function
-    | S { source; target } -> Fmt.pf f "%d->%d" source target
-    | M { sources = sb, se; targets = tb, te } ->
-        Fmt.pf f "%d:%d->%d:%d" sb se tb te
+  let pp f { source; target } = Fmt.pf f "%d->%d" source target
 end
 
 (* overrides *)
@@ -367,9 +362,8 @@ module E = struct
       let ports =
         List.map
           (function
-            | Port.S { source; target } ->
-                { Current_deployer_api.Types.PortRedirection.source; target }
-            | _ -> failwith "unsupported")
+            | { Port.source; target } ->
+                { Current_deployer_api.Types.PortRedirection.source; target })
           ports
       in
       let* socket = Client.Wire.connect () in

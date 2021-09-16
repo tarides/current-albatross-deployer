@@ -259,12 +259,12 @@ let pipeline () =
   in
   let publish_entry_live =
     E.publish ~service:"entry-live"
-      ~ports:[ Current_deployer.Port.S { source = 25; target = 25 } ]
+      ~ports:[ { Current_deployer.Port.source = 25; target = 25 } ]
       staged_entry.live
   in
   let publish_entry_current =
     E.publish ~service:"entry-current"
-      ~ports:[ Current_deployer.Port.S { source = 2525; target = 25 } ]
+      ~ports:[ { Current_deployer.Port.source = 2525; target = 25 } ]
       staged_entry.current
   in
   let all_deployments =

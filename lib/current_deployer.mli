@@ -20,12 +20,10 @@ module Args : sig
 end
 
 module Port : sig
-  type t =
-    | S of { source : int; target : int }
-    | M of { sources : int * int; targets : int * int }
+  type t = { source : int; target : int }
 end
 
-(* Experimental *) 
+(* Experimental *)
 
 module E : sig
   module Info : sig
@@ -59,7 +57,6 @@ module E : sig
   end
 
   val get_ip : Config.Pre.t Current.t -> Ipaddr.V4.t Current.t
-
 
   val deploy_albatross : Config.t Current.t -> Info.t Current.t
 
