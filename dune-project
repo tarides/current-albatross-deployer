@@ -1,6 +1,6 @@
 (lang dune 2.0)
 
-(name current-albatross)
+(name current-deployer)
 
 
 
@@ -17,7 +17,7 @@
 (generate_opam_files true)
 
 (package
- (name current-albatross)
+ (name current-deployer)
  (synopsis "A short, but powerful statement about your project")
  (description "A short, but powerful statement about your project")
  (depends

@@ -1,0 +1,6 @@
+(library
+ (name current_deployer_api)
+ (public_name current-deployer.api)
+ (libraries ipaddr asn1-combinators rresult logs logs.fmt)
+ (flags
+  (:standard -w -53-55)))

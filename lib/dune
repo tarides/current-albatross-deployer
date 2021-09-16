@@ -1,4 +1,11 @@
 (library
- (name current_albatross)
- (public_name current-albatross)
- (libraries ctypes))
+ (name current_deployer)
+ (public_name current-deployer)
+ (libraries current current_docker ipaddr str current_deployer_api albatross)
+ (preprocess
+  (pps ppx_deriving.std ppx_deriving_yojson)))
+
+(env
+ (dev
+  (flags
+   (:standard -warn-error -A -w -40-4))))
