@@ -137,7 +137,7 @@ end = struct
        Activator.get t ()
 end
 
-module E = Current_deployer.E
+module E = Current_deployer
 
 let pipeline () =
   let open Current.Syntax in
