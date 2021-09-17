@@ -46,7 +46,8 @@ module Spec : sig
   module IpManager : sig
     val list : (unit, Types.Ip.t list) Rpc.t
 
-    val request : (string, (Types.Ip.t, [ `Full ]) result) Rpc.t
+    val request :
+      (string * Ipaddr.V4.t list, (Types.Ip.t, [ `Full ]) result) Rpc.t
 
     val free : (string, (Types.Ip.t, [ `Not_found ]) result) Rpc.t
   end

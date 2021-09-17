@@ -6,18 +6,20 @@ module Types = Current_deployer_api.Types
 
 module Ipmap = struct
   module Map = Map.Make (Ipaddr.V4)
+  module Set = Set.Make (Ipaddr.V4)
 
   type 'a t = { prefix : Ipaddr.V4.Prefix.t; content : 'a Map.t }
 
   let mem ip { content; _ } = Map.mem ip content
 
-  let obtain t name =
+  let obtain ~blacklist t name =
     (* assumption: name don't exist *)
     (* first IP is host: maybe don't hardcode that ? *)
-    let start = Ipaddr.V4.(Prefix.first t.prefix |> succ) |> Result.get_ok in
+    let blacklist = Set.of_list blacklist in
+    let start = Ipaddr.V4.Prefix.first t.prefix in
     let stop = Ipaddr.V4.Prefix.last t.prefix in
     let rec test ip =
-      match Map.mem ip t.content with
+      match Map.mem ip t.content || Set.mem ip blacklist with
       | false -> Some ({ t with content = Map.add ip name t.content }, ip)
       | true when ip <> stop -> test (Ipaddr.V4.succ ip |> Result.get_ok)
       | true -> None
@@ -57,27 +59,32 @@ module State = struct
 
   let list_ips t = Ipmap.bindings t.ips
 
-  let obtain_ip t name =
-    let existing_ip =
-      Ipmap.bindings t.ips
-      |> List.find_map (fun (ip : Types.Ip.t) ->
-             if ip.tag = name then Some ip else None)
-    in
-    match existing_ip with
-    | None -> (
-        match Ipmap.obtain t.ips name with
-        | None -> Error `Full
-        | Some (ips, new_ip) ->
-            t.ips <- ips;
-            Ok { Types.Ip.ip = new_ip; tag = name })
-    | Some ip -> Ok ip
-
   let remove_ip t name =
     let ips, removed_element = Ipmap.remove t.ips name in
     t.ips <- ips;
     match removed_element with
     | None -> Error `Not_found
     | Some ip -> Ok { Types.Ip.ip; tag = name }
+
+  let obtain_ip ~blacklist t name =
+    let existing_ip =
+      Ipmap.bindings t.ips
+      |> List.find_map (fun (ip : Types.Ip.t) ->
+             if ip.tag = name then Some ip else None)
+    in
+    let obtain () =
+      match Ipmap.obtain ~blacklist t.ips name with
+      | None -> Error `Full
+      | Some (ips, new_ip) ->
+          t.ips <- ips;
+          Ok { Types.Ip.ip = new_ip; tag = name }
+    in
+    match existing_ip with
+    | Some ip when not (List.exists (fun ip' -> ip.ip = ip') blacklist) -> Ok ip
+    | Some _ ->
+        let _ = remove_ip t name |> Result.get_ok in
+        obtain ()
+    | None -> obtain ()
 
   let list_deployments t = t.deployments |> List.map snd
 
@@ -277,7 +284,8 @@ let handlers ~state =
     [
       (* IPs *)
       implement Spec.IpManager.list (fun () -> State.list_ips state);
-      implement Spec.IpManager.request (fun tag -> State.obtain_ip state tag);
+      implement Spec.IpManager.request (fun (tag, blacklist) ->
+          State.obtain_ip ~blacklist state tag);
       implement Spec.IpManager.free (fun tag -> State.remove_ip state tag);
       (* Port publishing *)
       implement Spec.Deployments.list (fun () -> State.list_deployments state);

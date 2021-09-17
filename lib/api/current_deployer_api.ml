@@ -83,12 +83,16 @@ module Asn_values = struct
     @@ Asn.S.(sequence2 (required ~label:"from" int) (required ~label:"to" int))
 
   let ip =
-    let f (ip, tag) = { Types.Ip.ip = Ipaddr.V4.of_string_exn ip; tag } in
-    let g { Types.Ip.ip; tag } = (Ipaddr.V4.to_string ip, tag) in
+    let f ip = Ipaddr.V4.of_string_exn ip in
+    let g ip = Ipaddr.V4.to_string ip in
+    Asn.S.map f g @@ Asn.S.printable_string
+
+  let ip_tag =
+    let f (ip, tag) = { Types.Ip.ip; tag } in
+    let g { Types.Ip.ip; tag } = (ip, tag) in
     Asn.S.map f g
     @@ Asn.S.(
-         sequence2
-           (required ~label:"ip" printable_string)
+         sequence2 (required ~label:"ip" ip)
            (required ~label:"tag" printable_string))
 
   let deployment_info =
@@ -96,7 +100,8 @@ module Asn_values = struct
     let g { Types.DeploymentInfo.ip; ports; name } = (ip, ports, name) in
     Asn.S.map f g
     @@ Asn.S.(
-         sequence3 (required ~label:"ip" ip)
+         sequence3
+           (required ~label:"ip" ip_tag)
            (required ~label:"ports" (sequence_of port_redirection))
            (required ~label:"name" printable_string))
 
@@ -128,21 +133,25 @@ module Spec = struct
       {
         Rpc.tag = "ipmanager.list";
         query = Asn.S.null;
-        resp = Asn.S.sequence_of Asn_values.ip;
+        resp = Asn.S.sequence_of Asn_values.ip_tag;
       }
 
     let request =
       {
         Rpc.tag = "ipmanager.request";
-        query = Asn.S.printable_string;
-        resp = result Asn_values.ip Asn_values.Error.full;
+        query =
+          Asn.S.(
+            sequence2
+              (required printable_string)
+              (required (sequence_of Asn_values.ip)));
+        resp = result Asn_values.ip_tag Asn_values.Error.full;
       }
 
     let free =
       {
         Rpc.tag = "ipmanager.free";
         query = Asn.S.printable_string;
-        resp = result Asn_values.ip Asn_values.Error.not_found;
+        resp = result Asn_values.ip_tag Asn_values.Error.not_found;
       }
   end
 
