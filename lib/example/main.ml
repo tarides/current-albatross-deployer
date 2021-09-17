@@ -170,7 +170,7 @@ let pipeline () =
             "error";
           ]);
       memory = 256;
-      network = "br1";
+      network = "br0";
     }
   in
   let ip_forward = E.get_ip config_forward in
@@ -196,7 +196,7 @@ let pipeline () =
             (*fake stuff here*);
           ]);
       memory = 256;
-      network = "br1";
+      network = "br0";
     }
   in
   let ip_signer = E.get_ip config_signer in
@@ -218,11 +218,12 @@ let pipeline () =
         (fun ip ->
           [
             "--ipv4=" ^ Ipaddr.V4.to_string ip ^ "/24";
-            "--ipv4-gateway=" ^ Ipaddr.V4.to_string ip_signer
-            (*fake stuff here*);
+            "--ipv4-gateway=" ^ Ipaddr.V4.to_string ip_signer;
+            "--bad-option";
+            (*fake stuff here*)
           ]);
       memory = 256;
-      network = "br1";
+      network = "br0";
     }
   in
   let ip_entry = E.get_ip config_entry in
@@ -230,23 +231,26 @@ let pipeline () =
     let+ ip_entry = ip_entry and+ config_entry = config_entry in
     E.Config.v config_entry ip_entry
   in
-
   (* Deployments *)
-  let deploy_forward = E.deploy_albatross config_forward in
-  let deploy_signer = E.deploy_albatross config_signer in
-  let deploy_entry = E.deploy_albatross config_entry in
+  let deploy_forward = E.deploy_albatross ~label:"forward" config_forward in
+  let deploy_signer = E.deploy_albatross ~label:"signer" config_signer in
+  let deploy_entry = E.deploy_albatross ~label:"entry" config_entry in
   (* Publish: staged *)
   let teleporter = Teleporter.v () in
   let staged_forward =
     Teleporter.stage_auto teleporter ~id:"forward"
-      (module E.Info)
+      (module E.Deployed)
       deploy_forward
   in
   let staged_signer =
-    Teleporter.stage_auto teleporter ~id:"signer" (module E.Info) deploy_signer
+    Teleporter.stage_auto teleporter ~id:"signer"
+      (module E.Deployed)
+      deploy_signer
   in
   let staged_entry =
-    Teleporter.stage_auto teleporter ~id:"entry" (module E.Info) deploy_entry
+    Teleporter.stage_auto teleporter ~id:"entry"
+      (module E.Deployed)
+      deploy_entry
   in
   let publish_no_ports =
     [
@@ -271,6 +275,11 @@ let pipeline () =
     Current.list_seq
       (publish_entry_live :: publish_entry_current :: publish_no_ports)
   in
+  let all_unikernels_monitors =
+    [ staged_forward; staged_signer; staged_entry ]
+    |> List.map (fun (t : _ Teleporter.staged) -> [ t.live; t.current ])
+    |> List.concat |> List.map E.monitor |> List.map E.is_running |> Current.all
+  in
   Current.all
     [
       E.collect all_deployments;
@@ -278,6 +287,7 @@ let pipeline () =
       |> List.map Current.ignore_value
       |> Current.all
       |> Teleporter.activate teleporter;
+      all_unikernels_monitors;
     ]
 
 let () =

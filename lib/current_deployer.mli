@@ -17,14 +17,6 @@ module Info : sig
   (** A deployed unikernel information *)
 
   val status : t -> [ `Running | `Exited ]
-
-  val pp : t Fmt.t
-
-  val marshal : t -> string
-
-  val unmarshal : string -> t
-
-  val digest : t -> string
 end
 
 module Config : sig
@@ -50,20 +42,37 @@ end
 val get_ip : Config.Pre.t Current.t -> Ipaddr.V4.t Current.t
 (** Use the current-deployerd service to obtain an IP for the configuration. *)
 
-val deploy_albatross : Config.t Current.t -> Info.t Current.t
+module Deployed : sig
+  type t
+
+  val pp : t Fmt.t
+
+  val marshal : t -> string
+
+  val unmarshal : string -> t
+
+  val digest : t -> string
+end
+
+val deploy_albatross :
+  ?label:string -> Config.t Current.t -> Deployed.t Current.t
 (** Deploy the configuration to albatross *)
 
-module Deployment : sig
+val monitor : ?poll_rate:float -> Deployed.t Current.t -> Info.t Current.t
+
+val is_running : Info.t Current.t -> unit Current.t
+
+module Published : sig
   type t
 end
 
 val publish :
   service:string ->
   ?ports:Port.t list ->
-  Info.t Current.t ->
-  Deployment.t Current.t
+  Deployed.t Current.t ->
+  Published.t Current.t
 (** Publish a service, optionally exposing ports to the deployed unikernel *)
 
-val collect : Deployment.t list Current.t -> unit Current.t
+val collect : Published.t list Current.t -> unit Current.t
 (** Garbage collect IPs and deployments managed by current-deployer and kill
     corresponding unikernels. Only specified deployments are kept. *)

@@ -163,7 +163,7 @@ module Albatross = struct
               Vmm_core.Unikernel.typ = `Solo5;
               compressed = false;
               image;
-              fail_behaviour = `Restart None;
+              fail_behaviour = `Quit;
               cpuid = 0;
               memory;
               block_devices = [];

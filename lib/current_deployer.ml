@@ -69,7 +69,6 @@ module Unikernel = struct
   let of_docker ~image ~location = { image; location }
 end
 
-
 module Port = struct
   type t = { source : int; target : int }
 
@@ -134,14 +133,13 @@ module Config = struct
 end
 
 module Info = struct
-  type t = {
-    status : [ `Running | `Exited ];
-    config : Config.t;
-    ip : Ipaddr.V4.t;
-  }
-  [@@deriving yojson]
+  type t = { status : [ `Running | `Exited ] }
 
   let status t = t.status
+end
+
+module Deployed = struct
+  type t = { config : Config.t } [@@deriving yojson]
 
   let marshal t = to_yojson t |> Yojson.Safe.to_string
 
@@ -149,7 +147,8 @@ module Info = struct
 
   let digest = marshal
 
-  let pp f { config; ip; _ } = Fmt.pf f "%s @%a" config.service Ipaddr.V4.pp ip
+  let pp f { config; _ } =
+    Fmt.pf f "%s @%a" config.service Ipaddr.V4.pp config.ip
 end
 
 module IpOp = struct
@@ -276,35 +275,74 @@ end
 
 module Deploy = Current_cache.Output (OpDeploy)
 
-let deploy_albatross config =
+let deploy_albatross ?label config =
   let open Current.Syntax in
-  let deploy =
-    Current.component "Deploy to albatross"
-    |> let> config = config in
-       Deploy.set No_context
-         { name = Config.name config }
-         {
-           unikernel = config.unikernel;
-           args = config.args;
-           memory = config.memory;
-           network = config.network;
-         }
-  in
-  let monitor =
-    (* TODO: actually monitor *)
-    Current.component "Monitor status"
-    |> let> config = config and> () = deploy in
-       let name = Config.name config in
-       let ip = config.ip in
-       let read () = Lwt_result.return { Info.status = `Running; ip; config } in
-       let watch _refresh = Lwt.return (fun () -> Lwt.return ()) in
-       let pp f = Fmt.pf f "Monitor deployment %s on %a" name Ipaddr.V4.pp ip in
+  let suffix = match label with None -> "" | Some v -> ": " ^ v in
+  Current.component "Deploy to albatross%s" suffix
+  |> let> config = config in
+     Deploy.set No_context
+       { name = Config.name config }
+       {
+         unikernel = config.unikernel;
+         args = config.args;
+         memory = config.memory;
+         network = config.network;
+       }
+     |> Current.Primitive.map_result (function
+          | Error _ as e -> e
+          | Ok () -> Ok { Deployed.config })
 
-       Current.Monitor.create ~read ~watch ~pp |> Current.Monitor.get
-  in
-  monitor
+let monitor ?(poll_rate = 10.) (deployment : Deployed.t Current.t) =
+  let open Current.Syntax in
+  Current.component "Monitor status"
+  |> let> deployment = deployment in
+     let config = deployment.config in
+     let name = Config.name config in
+     let vmm_name = Vmm_core.Name.of_string name |> Result.get_ok in
+     let ip = config.ip in
+     let status = ref `Running in
+     let set_and_refresh value refresh =
+       if !status <> value then (
+         status := value;
+         refresh ())
+     in
+     let read () = Lwt_result.return { Info.status = !status } in
+     let watch refresh =
+       let open Lwt.Syntax in
+       let stop = Lwt_condition.create () in
+       let rec loop () =
+         let* unikernel_info = Client.Albatross.show_unikernel vmm_name in
+         match unikernel_info with
+         | Ok [ (_, _info) ] ->
+             set_and_refresh `Running refresh;
+             let* () = Lwt_unix.sleep poll_rate in
+             loop ()
+         | Ok [] ->
+             set_and_refresh `Exited refresh;
+             let* () = Lwt_unix.sleep poll_rate in
+             loop ()
+         | _ -> Lwt.return_unit
+       in
 
-module Deployment = struct
+       Lwt.async (fun () -> Lwt.pick [ Lwt_condition.wait stop; loop () ]);
+       Lwt.return (fun () ->
+           Lwt_condition.signal stop ();
+           Lwt.return_unit)
+     in
+     let pp f = Fmt.pf f "Monitor deployment %s on %a" name Ipaddr.V4.pp ip in
+
+     Current.Monitor.create ~read ~watch ~pp |> Current.Monitor.get
+
+let is_running (info : Info.t Current.t) =
+  let open Current.Syntax in
+  Current.component "is running"
+  |> let> info = info in
+     let result =
+       if info.status = `Running then Ok () else Error (`Msg "not running")
+     in
+     Current_incr.const (result, None)
+
+module Published = struct
   type t = { service : string }
 
   let marshal t = t.service
@@ -331,7 +369,7 @@ module OpPublish = struct
       |> Digest.string |> Digest.to_hex
   end
 
-  module Outcome = Deployment
+  module Outcome = Published
 
   let publish No_context job { Key.service } { Value.ports; ip } =
     let open Lwt.Syntax in
@@ -364,7 +402,7 @@ module OpPublish = struct
     in
     let** () = Lwt.return (result |> remap_errors) in
 
-    Lwt_result.return { Deployment.service }
+    Lwt_result.return { Published.service }
 
   let pp f (key, _v) = Fmt.pf f "@[<v2>deploy %s@]" key.Key.service
 
@@ -375,9 +413,9 @@ module Publish = Current_cache.Output (OpPublish)
 
 let publish ~service ?(ports = []) info =
   let open Current.Syntax in
-  Current.component "Publish port"
+  Current.component "Publish %s\n%a" service Fmt.(list Port.pp) ports
   |> let> info = info in
-     Publish.set No_context { service } { ports; ip = info.Info.ip }
+     Publish.set No_context { service } { ports; ip = info.Deployed.config.ip }
 
 module OpCollect = struct
   type t = No_context
@@ -389,12 +427,12 @@ module OpCollect = struct
   let auto_cancel = false
 
   module Key = struct
-    type t = Deployment.t list
+    type t = Published.t list
 
     let digest t =
       t
-      |> List.sort (fun a b -> String.compare a.Deployment.service b.service)
-      |> List.map (fun d -> d.Deployment.service)
+      |> List.sort (fun a b -> String.compare a.Published.service b.service)
+      |> List.map (fun d -> d.Published.service)
       |> String.concat "|"
   end
 
@@ -405,7 +443,7 @@ module OpCollect = struct
 
     let module StringSet = Set.Make (String) in
     let deployed_services =
-      StringSet.of_list (List.map (fun t -> t.Deployment.service) roots)
+      StringSet.of_list (List.map (fun t -> t.Published.service) roots)
     in
     let perform ~socket =
       (* Step 1: daemon: remove unused deployments *)
