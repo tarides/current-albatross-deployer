@@ -3,6 +3,7 @@ module Docker = Current_docker.Default
 open Lwt.Syntax
 
 module Teleporter : sig
+  (* Required to be able to stage a Current.t *)
   module type S = sig
     type t
 
@@ -15,46 +16,29 @@ module Teleporter : sig
     val pp : t Fmt.t
   end
 
-  type t
-
   type 'a staged = {
     live : 'a;
     (* value kept alive by the stager *)
     current : 'a; (* current value like if the stager didn't exist *)
   }
 
-  val v : unit -> t
-
-  val stage_auto :
-    t ->
-    id:string ->
-    (module S with type t = 'a) ->
-    'a Current.t ->
-    'a Current.t staged
+  type activation
 
   (* promote the stages when the current has a value *)
-  val activate : t -> unit Current.t -> unit Current.t
-end = struct
-  type t = { pool : unit Current.Pool.t; activator : unit -> unit }
+  val activate : id:string -> unit Current.t -> activation Current.t
 
+  val stage_auto :
+    id:string ->
+    (module S with type t = 'a) ->
+    activation Current.t ->
+    'a Current.t ->
+    'a Current.t staged
+end = struct
   type 'a staged = {
     live : 'a;
     (* value kept alive by the stager *)
     current : 'a; (* current value like if the stager didn't exist *)
   }
-
-  let v () =
-    let condition = Lwt_condition.create () in
-    let pool =
-      Current.Pool.of_fn ~label:"teleporter" (fun ~priority:_ ~switch:_ ->
-          let cancel = Lwt_condition.create () in
-          let ressource =
-            Lwt.pick [ Lwt_condition.wait condition; Lwt_condition.wait cancel ]
-          in
-          ( ressource,
-            fun () -> Lwt.return (Lwt_condition.broadcast condition ()) ))
-    in
-    { pool; activator = Lwt_condition.broadcast condition }
 
   module type S = sig
     type t
@@ -69,7 +53,7 @@ end = struct
   end
 
   module Op (M : S) = struct
-    type nonrec t = t
+    type nonrec t = Value of M.t
 
     module Key = struct
       type t = string
@@ -77,10 +61,10 @@ end = struct
       let digest = Fun.id
     end
 
-    module Value = M
+    module Value = Current.String
     module Outcome = M
 
-    let pp f (_, v) = M.pp f v
+    let pp f (k, _) = Fmt.pf f "Stager %s" k
 
     let id = "stager"
 
@@ -88,53 +72,53 @@ end = struct
 
     let latched = true
 
-    let run { pool; _ } job _ key =
-      let* () = Current.Job.start_with ~pool ~level:Harmless job in
+    let run (Value v) job _ _key =
+      let* () = Current.Job.start ~level:Harmless job in
       Current.Job.log job "Stager update validated";
-      Lwt.return_ok key
+      Lwt.return_ok v
   end
 
-  let stage_auto (type a) t ~id (module M : S with type t = a) v =
+  let stage_auto (type a) ~id (module M : S with type t = a) t v =
     let module Stager = Current_cache.Generic (Op (M)) in
     let live =
       let open Current.Syntax in
       Current.component "stager"
-      |> let> v = v in
-         Stager.run t id v
+      |> let> v = v and> t = t in
+         Stager.run (Value v) id t
     in
     { current = v; live }
 
   module OpActivator = struct
-    type nonrec t = t
+    type t = No_context
 
     let id = "activator"
 
-    let pp f () = Fmt.string f "activator"
+    let pp f (k, _) = Fmt.pf f "activator %s" k
 
-    module Key = struct
-      type t = unit
+    module Key = Current.String
+    module Value = Current.String
+    module Outcome = Current.String
 
-      let digest () = Random.int 1_000_000_000 |> string_of_int
-    end
+    let auto_cancel = false
 
-    module Value = Current.Unit
+    let latched = true
 
-    let auto_cancel = true
-
-    let build { activator; _ } job () =
+    let run No_context job _k v =
       let* () = Current.Job.start ~level:Dangerous job in
       Current.Job.log job "Stager update !";
-      activator ();
-      Lwt.return_ok ()
+      Lwt.return_ok v
   end
 
-  module Activator = Current_cache.Make (OpActivator)
+  module Activator = Current_cache.Generic (OpActivator)
 
-  let activate t v =
+  type activation = string
+
+  let activate ~id v =
     let open Current.Syntax in
-    Current.component "activator"
+    Current.component "activator for %s" id
     |> let> () = v in
-       Activator.get t ()
+       let k = Random.int 1_000_000_000 |> string_of_int in
+       Activator.run No_context id k
 end
 
 module E = Current_deployer
@@ -165,7 +149,7 @@ let pipeline () =
         (fun ip ->
           [
             "--ipv4=" ^ Ipaddr.V4.to_string ip ^ "/24";
-            "--ipv4-gateway=10.0.0.1";
+            "--ipv4-gateway=10.0.0.2";
             "-l";
             "error";
           ]);
@@ -236,21 +220,27 @@ let pipeline () =
   let deploy_signer = E.deploy_albatross ~label:"signer" config_signer in
   let deploy_entry = E.deploy_albatross ~label:"entry" config_entry in
   (* Publish: staged *)
-  let teleporter = Teleporter.v () in
+  let teleporter =
+    [ deploy_forward; deploy_entry; deploy_signer ]
+    |> List.map Current.ignore_value
+    |> Current.all
+    |> Teleporter.activate ~id:"email stack"
+  in
+
   let staged_forward =
-    Teleporter.stage_auto teleporter ~id:"forward"
+    Teleporter.stage_auto ~id:"forward"
       (module E.Deployed)
-      deploy_forward
+      teleporter deploy_forward
   in
   let staged_signer =
-    Teleporter.stage_auto teleporter ~id:"signer"
+    Teleporter.stage_auto ~id:"signer"
       (module E.Deployed)
-      deploy_signer
+      teleporter deploy_signer
   in
   let staged_entry =
-    Teleporter.stage_auto teleporter ~id:"entry"
+    Teleporter.stage_auto ~id:"entry"
       (module E.Deployed)
-      deploy_entry
+      teleporter deploy_entry
   in
   let publish_no_ports =
     [
@@ -280,15 +270,7 @@ let pipeline () =
     |> List.map (fun (t : _ Teleporter.staged) -> [ t.live; t.current ])
     |> List.concat |> List.map E.monitor |> List.map E.is_running |> Current.all
   in
-  Current.all
-    [
-      E.collect all_deployments;
-      [ deploy_forward; deploy_entry; deploy_signer ]
-      |> List.map Current.ignore_value
-      |> Current.all
-      |> Teleporter.activate teleporter;
-      all_unikernels_monitors;
-    ]
+  Current.all [ E.collect all_deployments; all_unikernels_monitors ]
 
 let () =
   Logs.(set_level (Some Info));
