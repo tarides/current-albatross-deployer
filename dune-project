@@ -21,6 +21,7 @@
  (synopsis "A short, but powerful statement about your project")
  (description "A short, but powerful statement about your project")
  (depends
+  albatross
   (ocaml (>= 4.08.0))
   dune
   (odoc :with-doc)))

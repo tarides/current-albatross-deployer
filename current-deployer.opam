@@ -6,6 +6,7 @@ maintainer: ["Lucas Pluvinage"]
 authors: ["Lucas Pluvinage"]
 license: "ISC"
 depends: [
+  "albatross"
   "ocaml" {>= "4.08.0"}
   "dune"
   "odoc" {with-doc}
