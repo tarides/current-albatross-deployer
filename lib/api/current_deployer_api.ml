@@ -83,9 +83,11 @@ module Asn_values = struct
     @@ Asn.S.(sequence2 (required ~label:"from" int) (required ~label:"to" int))
 
   let ip =
-    let f ip = Ipaddr.V4.of_string_exn ip in
-    let g ip = Ipaddr.V4.to_string ip in
-    Asn.S.map f g @@ Asn.S.printable_string
+    Asn.S.map Ipaddr.V4.of_string_exn Ipaddr.V4.to_string Asn.S.printable_string
+
+  let ip_prefix =
+    Asn.S.map Ipaddr.V4.Prefix.of_string_exn Ipaddr.V4.Prefix.to_string
+      Asn.S.printable_string
 
   let ip_tag =
     let f (ip, tag) = { Types.Ip.ip; tag } in
@@ -141,8 +143,9 @@ module Spec = struct
         Rpc.tag = "ipmanager.request";
         query =
           Asn.S.(
-            sequence2
+            sequence3
               (required printable_string)
+              (required Asn_values.ip_prefix)
               (required (sequence_of Asn_values.ip)));
         resp = result Asn_values.ip_tag Asn_values.Error.full;
       }

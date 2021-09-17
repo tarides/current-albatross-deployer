@@ -39,7 +39,11 @@ module Config : sig
   (** Feed the prepared configuration with an IP *)
 end
 
-val get_ip : ?blacklist:Ipaddr.V4.t list -> Config.Pre.t Current.t -> Ipaddr.V4.t Current.t
+val get_ip :
+  ?blacklist:Ipaddr.V4.t list ->
+  prefix:Ipaddr.V4.Prefix.t ->
+  Config.Pre.t Current.t ->
+  Ipaddr.V4.t Current.t
 (** Use the current-deployerd service to obtain an IP for the configuration. *)
 
 module Deployed : sig

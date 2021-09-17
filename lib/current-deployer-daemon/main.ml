@@ -8,19 +8,19 @@ module Ipmap = struct
   module Map = Map.Make (Ipaddr.V4)
   module Set = Set.Make (Ipaddr.V4)
 
-  type 'a t = { prefix : Ipaddr.V4.Prefix.t; content : 'a Map.t }
+  type 'a t = { content : 'a Map.t }
 
   let mem ip { content; _ } = Map.mem ip content
 
-  let obtain ~blacklist t name =
+  let obtain ~blacklist ~prefix t name =
     (* assumption: name don't exist *)
     (* first IP is host: maybe don't hardcode that ? *)
     let blacklist = Set.of_list blacklist in
-    let start = Ipaddr.V4.Prefix.first t.prefix in
-    let stop = Ipaddr.V4.Prefix.last t.prefix in
+    let start = Ipaddr.V4.Prefix.first prefix in
+    let stop = Ipaddr.V4.Prefix.last prefix in
     let rec test ip =
       match Map.mem ip t.content || Set.mem ip blacklist with
-      | false -> Some ({ t with content = Map.add ip name t.content }, ip)
+      | false -> Some ({ content = Map.add ip name t.content }, ip)
       | true when ip <> stop -> test (Ipaddr.V4.succ ip |> Result.get_ok)
       | true -> None
     in
@@ -34,12 +34,12 @@ module Ipmap = struct
           else (new_map, Some ip))
         t.content (Map.empty, None)
     in
-    ({ t with content }, removed_ip)
+    ({ content }, removed_ip)
 
   let bindings t =
     Map.bindings t.content |> List.map (fun (ip, tag) -> { Types.Ip.ip; tag })
 
-  let make prefix = { prefix; content = Map.empty }
+  let make () = { content = Map.empty }
 end
 
 module State = struct
@@ -52,7 +52,7 @@ module State = struct
 
   let v () =
     {
-      ips = Ipmap.make (Ipaddr.V4.Prefix.of_string_exn "10.0.0.0/24");
+      ips = Ipmap.make ();
       deployments = [];
       iptables = Iptables.Nat.init ~name:"CURRENT-DEPLOYER" [];
     }
@@ -66,14 +66,14 @@ module State = struct
     | None -> Error `Not_found
     | Some ip -> Ok { Types.Ip.ip; tag = name }
 
-  let obtain_ip ~blacklist t name =
+  let obtain_ip ~blacklist ~prefix t name =
     let existing_ip =
       Ipmap.bindings t.ips
       |> List.find_map (fun (ip : Types.Ip.t) ->
              if ip.tag = name then Some ip else None)
     in
     let obtain () =
-      match Ipmap.obtain ~blacklist t.ips name with
+      match Ipmap.obtain ~blacklist ~prefix t.ips name with
       | None -> Error `Full
       | Some (ips, new_ip) ->
           t.ips <- ips;
@@ -281,11 +281,11 @@ let handle ~handlers socket =
 let handlers ~state =
   let module Spec = Current_deployer_api.Spec in
   Handler.
-    [
+    [ 
       (* IPs *)
       implement Spec.IpManager.list (fun () -> State.list_ips state);
-      implement Spec.IpManager.request (fun (tag, blacklist) ->
-          State.obtain_ip ~blacklist state tag);
+      implement Spec.IpManager.request (fun (tag, prefix, blacklist) ->
+          State.obtain_ip ~blacklist ~prefix state tag);
       implement Spec.IpManager.free (fun tag -> State.remove_ip state tag);
       (* Port publishing *)
       implement Spec.Deployments.list (fun () -> State.list_deployments state);
