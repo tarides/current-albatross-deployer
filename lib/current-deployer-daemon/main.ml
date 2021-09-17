@@ -14,7 +14,6 @@ module Ipmap = struct
 
   let obtain ~blacklist ~prefix t name =
     (* assumption: name don't exist *)
-    (* first IP is host: maybe don't hardcode that ? *)
     let blacklist = Set.of_list blacklist in
     let start = Ipaddr.V4.Prefix.first prefix in
     let stop = Ipaddr.V4.Prefix.last prefix in
@@ -212,7 +211,7 @@ module Wire = struct
     let name = "/var/run/current-deployer/current-deployerd.sock" in
     (Lwt_unix.file_exists name >>= function
      | true -> Lwt_unix.unlink name
-     | false -> Lwt.return_unit)
+     | false -> Bos.OS.Dir.create (Fpath.of_string name |> Result.get_ok) |> Result.get_ok |> ignore; Lwt.return_unit)
     >>= fun () ->
     let s = Lwt_unix.(socket PF_UNIX SOCK_STREAM 0) in
     Lwt_unix.set_close_on_exec s;
