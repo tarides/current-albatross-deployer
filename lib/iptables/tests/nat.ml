@@ -34,13 +34,44 @@ let command_generation_tests =
                         ())));
              ]
            ~action:
-             (Nat.Action.destination_nat ~port:(Nat.Port_range (1024, 2048))
+             (Nat.Action.destination_nat
+                ~port:(Nat.Port_range (1024, 2048))
                 (Ipaddr.V4.of_string "192.168.0.9" |> Result.get_ok))
            Bos.Cmd.(
              of_string
-               "--protocol tcp -m multiport --destination-ports 0-1024 !\n\
+               "--protocol tcp --destination-port 0-1024 !\n\
                \           --tcp-flags SYN,ACK ACK -j DNAT --to-destination\n\
                \           192.168.0.9:1024-2048"
+             |> Result.get_ok);
+      test_case "udp match with multiport" `Quick
+      @@ test_nat
+           ~matches:
+             [
+               Nat.Match.(
+                 protocol
+                   (`Udp
+                     (Udp.v
+                        ~sport:
+                          (Nat.Negatable.V
+                             [ Nat.Port_range (40000, 50000); Nat.Port 42 ])
+                        ~dport:
+                          (Nat.Negatable.V
+                             [
+                               Nat.Port_range (0, 1024);
+                               Nat.Port 8080;
+                               Nat.Port 8081;
+                             ])
+                        ())));
+             ]
+           ~action:
+             (Nat.Action.destination_nat ~port:(Nat.Port 53)
+                (Ipaddr.V4.of_string "192.168.0.9" |> Result.get_ok))
+           Bos.Cmd.(
+             of_string
+               "--protocol udp -m multiport --source-ports 40000-50000,42\n\
+               \           --destination-ports 0-1024,8080,8081 -j DNAT \
+                --to-destination\n\
+               \           192.168.0.9:53"
              |> Result.get_ok);
     ]
 

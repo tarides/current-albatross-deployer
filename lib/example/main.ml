@@ -1,126 +1,6 @@
 module Git = Current_git
 module Docker = Current_docker.Default
 open Lwt.Syntax
-
-module Teleporter : sig
-  (* Required to be able to stage a Current.t *)
-  module type S = sig
-    type t
-
-    val digest : t -> string
-
-    val marshal : t -> string
-
-    val unmarshal : string -> t
-
-    val pp : t Fmt.t
-  end
-
-  type 'a staged = {
-    live : 'a;
-    (* value kept alive by the stager *)
-    current : 'a; (* current value like if the stager didn't exist *)
-  }
-
-  type activation
-
-  (* promote the stages when the current has a value *)
-  val activate : id:string -> unit Current.t -> activation Current.t
-
-  val stage_auto :
-    id:string ->
-    (module S with type t = 'a) ->
-    activation Current.t ->
-    'a Current.t ->
-    'a Current.t staged
-end = struct
-  type 'a staged = {
-    live : 'a;
-    (* value kept alive by the stager *)
-    current : 'a; (* current value like if the stager didn't exist *)
-  }
-
-  module type S = sig
-    type t
-
-    val digest : t -> string
-
-    val marshal : t -> string
-
-    val unmarshal : string -> t
-
-    val pp : t Fmt.t
-  end
-
-  module Op (M : S) = struct
-    type nonrec t = Value of M.t
-
-    module Key = struct
-      type t = string
-
-      let digest = Fun.id
-    end
-
-    module Value = Current.String
-    module Outcome = M
-
-    let pp f (k, _) = Fmt.pf f "Stager %s" k
-
-    let id = "stager"
-
-    let auto_cancel = true
-
-    let latched = true
-
-    let run (Value v) job _ _key =
-      let* () = Current.Job.start ~level:Harmless job in
-      Current.Job.log job "Stager update validated";
-      Lwt.return_ok v
-  end
-
-  let stage_auto (type a) ~id (module M : S with type t = a) t v =
-    let module Stager = Current_cache.Generic (Op (M)) in
-    let live =
-      let open Current.Syntax in
-      Current.component "stager"
-      |> let> v = v and> t = t in
-         Stager.run (Value v) id t
-    in
-    { current = v; live }
-
-  module OpActivator = struct
-    type t = No_context
-
-    let id = "activator"
-
-    let pp f (k, _) = Fmt.pf f "activator %s" k
-
-    module Key = Current.String
-    module Value = Current.String
-    module Outcome = Current.String
-
-    let auto_cancel = false
-
-    let latched = true
-
-    let run No_context job _k v =
-      let* () = Current.Job.start ~level:Dangerous job in
-      Current.Job.log job "Stager update !";
-      Lwt.return_ok v
-  end
-
-  module Activator = Current_cache.Generic (OpActivator)
-
-  type activation = string
-
-  let activate ~id v =
-    let open Current.Syntax in
-    Current.component "activator for %s" id
-    |> let> () = v in
-       let k = Random.int 1_000_000_000 |> string_of_int in
-       Activator.run No_context id k
-end
-
 module E = Current_deployer
 
 let pipeline () =
@@ -135,6 +15,12 @@ let pipeline () =
       ~build_args:[ "--build-arg"; "TARGET=hvt" ]
       ~dockerfile ~label:"docker-build" ~pull:true
   in
+  let get_ip =
+    E.get_ip
+      ~blacklist:[ Ipaddr.V4.of_string_exn "10.0.0.1" ]
+      ~prefix:(Ipaddr.V4.Prefix.of_string_exn "10.0.0.0/24")
+  in
+
   (* 3: forward *)
   let config_forward =
     let+ image = image in
@@ -157,7 +43,7 @@ let pipeline () =
       network = "br0";
     }
   in
-  let ip_forward = E.get_ip config_forward in
+  let ip_forward = get_ip config_forward in
   let config_forward =
     let+ ip_forward = ip_forward and+ config_forward = config_forward in
     E.Config.v config_forward ip_forward
@@ -183,7 +69,7 @@ let pipeline () =
       network = "br0";
     }
   in
-  let ip_signer = E.get_ip config_signer in
+  let ip_signer = get_ip config_signer in
   let config_signer =
     let+ ip_signer = ip_signer and+ config_signer = config_signer in
     E.Config.v config_signer ip_signer
@@ -210,7 +96,7 @@ let pipeline () =
       network = "br0";
     }
   in
-  let ip_entry = E.get_ip config_entry in
+  let ip_entry = get_ip config_entry in
   let config_entry =
     let+ ip_entry = ip_entry and+ config_entry = config_entry in
     E.Config.v config_entry ip_entry
@@ -224,21 +110,21 @@ let pipeline () =
     [ deploy_forward; deploy_entry; deploy_signer ]
     |> List.map Current.ignore_value
     |> Current.all
-    |> Teleporter.activate ~id:"email stack"
+    |> Stager.activate ~id:"email stack"
   in
 
   let staged_forward =
-    Teleporter.stage_auto ~id:"forward"
+    Stager.stage_auto ~id:"forward"
       (module E.Deployed)
       teleporter deploy_forward
   in
   let staged_signer =
-    Teleporter.stage_auto ~id:"signer"
+    Stager.stage_auto ~id:"signer"
       (module E.Deployed)
       teleporter deploy_signer
   in
   let staged_entry =
-    Teleporter.stage_auto ~id:"entry"
+    Stager.stage_auto ~id:"entry"
       (module E.Deployed)
       teleporter deploy_entry
   in
@@ -267,7 +153,7 @@ let pipeline () =
   in
   let all_unikernels_monitors =
     [ staged_forward; staged_signer; staged_entry ]
-    |> List.map (fun (t : _ Teleporter.staged) -> [ t.live; t.current ])
+    |> List.map (fun (t : _ Stager.staged) -> [ t.live; t.current ])
     |> List.concat |> List.map E.monitor |> List.map E.is_running |> Current.all
   in
   Current.all [ E.collect all_deployments; all_unikernels_monitors ]
