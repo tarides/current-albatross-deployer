@@ -1,6 +1,5 @@
 [Unit]
 Description=Current-deployer daemon (current-deployerd)
-Requires=current_deployerd.socket
 After=syslog.target
 
 [Service]
@@ -27,5 +26,4 @@ IgnoreSIGPIPE=true
 #RuntimeDirectoryMode=0700
 
 [Install]
-Also=current-deployerd.socket
 WantedBy=multi-user.target
