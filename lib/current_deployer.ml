@@ -506,15 +506,18 @@ module OpCollect = struct
       (* Step 2: albatross: remove unikernels starting by a deployment's service
          name *)
       Current.Job.log job "Stage 2: remove unused unikernels";
+      Current.Job.log job "Live unikernels:";
       let ( let** ) = Lwt_result.bind in
       let** unikernels = Client.Albatross.list_unikernels () in
       let unikernels_to_remove =
         List.filter
           (fun (name, _) ->
             let tag = Vmm_core.Name.to_string name in
+            Current.Job.log job "- %s" tag;
             StringSet.mem tag removed_ips_tags)
           unikernels
       in
+      Current.Job.log job "Remove them:";
       let* () =
         Lwt_list.iter_s
           (fun (name, _) ->
