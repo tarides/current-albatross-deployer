@@ -24,10 +24,10 @@ module Pre = struct
 
   let value_digest { unikernel; args; memory; network; _ } =
     let args = args (Ipaddr.V4.of_string_exn "0.0.0.0") in
-    Fmt.str "%s|%a|%a|%d|%s"
-      (Docker.Image.digest unikernel.image)
+    Fmt.str "%s|%a|%d|%s"
+      (Unikernel.digest unikernel)
       Fmt.(list ~sep:sp string)
-      args Fpath.pp unikernel.location memory network
+      args memory network
     |> Digest.string |> Digest.to_hex
 
   let id t =

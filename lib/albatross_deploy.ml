@@ -42,10 +42,10 @@ module OpDeploy = struct
     }
 
     let digest { unikernel; args; memory; network } =
-      Fmt.str "%s|%a|%a|%d|%s"
-        (Docker.Image.digest unikernel.image)
+      Fmt.str "%s|%a|%d|%s"
+        (Unikernel.digest unikernel)
         Fmt.(list ~sep:sp string)
-        args Fpath.pp unikernel.location memory network
+        args memory network
       |> Digest.string |> Digest.to_hex
   end
 
@@ -60,19 +60,12 @@ module OpDeploy = struct
       { Value.unikernel; args; memory; network } =
     let open Lwt.Syntax in
     let ( let** ) = Lwt_result.bind in
-    let image = Raw.Image.of_hash (Docker.Image.hash unikernel.image) in
     let* () = Current.Job.start job ~level:Mostly_harmless in
-    Current.Job.log job "Deploy %a -> %s" Raw.Image.pp image name;
+    Current.Job.log job "Deploy %s -> %s" (Unikernel.digest unikernel) name;
     (* Extract unikernel image from Docker image: *)
     Current.Job.log job "Extracting unikernel";
     with_tmp ~prefix:"ocurrent-deployer-" ~suffix:".hvt" @@ fun tmp_path ->
-    let** () =
-      Raw.Cmd.with_container ~docker_context:None ~job ~kill_on_cancel:true
-        (run image ~docker_context:None) (fun id ->
-          let src = Fmt.str "%s:%a" id Fpath.pp unikernel.location in
-          Current.Process.exec ~cancellable:true ~job
-            (docker_cp ~docker_context:None src tmp_path))
-    in
+    let** () = Unikernel.extract_to ~path:(Fpath.v tmp_path) ~job unikernel in
     Current.Job.log job "Check if unikernel exists in albatross";
     Current.Job.log job "Unikernel name: %s" name;
     (* Check if unikernel exists and destroy it (actually, that shouldn't
@@ -108,7 +101,8 @@ let deploy_albatross ?label config =
   let suffix = match label with None -> "" | Some v -> ": " ^ v in
   Current.component "Deploy to albatross%s" suffix
   |> let> config = config in
-     Deploy.set No_context { name = config.Config.id }
+     Deploy.set No_context
+       { name = config.Config.id }
        {
          unikernel = config.unikernel;
          args = config.args;

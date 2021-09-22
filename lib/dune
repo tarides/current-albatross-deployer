@@ -1,7 +1,15 @@
 (library
  (name current_deployer)
  (public_name current-deployer)
- (libraries current current_docker ipaddr str current_deployer_client albatross)
+ (libraries
+  current
+  current_docker
+  current.fs
+  ipaddr
+  str
+  current_deployer_client
+  obuilder-spec
+  albatross)
  (preprocess
   (pps ppx_deriving.std ppx_deriving_yojson)))
 

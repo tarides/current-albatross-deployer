@@ -23,10 +23,9 @@ let pipeline () =
 
   (* 3: forward *)
   let config_forward =
-    let+ image = image in
-    let unikernel =
-      Current_deployer.Unikernel.of_docker ~image
-        ~location:(Fpath.v "/unikernel.hvt")
+    let+ unikernel =
+      Current_deployer.Unikernel.of_docker ~location:(Fpath.v "/unikernel.hvt")
+        image
     in
     {
       E.Config.Pre.service = "service-forwarder";
@@ -50,11 +49,10 @@ let pipeline () =
   in
   (* 2: dkim signer *)
   let config_signer =
-    let+ image = image and+ ip_forward = ip_forward in
-    let unikernel =
-      Current_deployer.Unikernel.of_docker ~image
-        ~location:(Fpath.v "/unikernel.hvt")
-    in
+    let+ unikernel =
+      Current_deployer.Unikernel.of_docker ~location:(Fpath.v "/unikernel.hvt")
+        image
+    and+ ip_forward = ip_forward in
     {
       E.Config.Pre.service = "service-signer";
       unikernel;
@@ -76,11 +74,10 @@ let pipeline () =
   in
   (* 1: entry *)
   let config_entry =
-    let+ image = image and+ ip_signer = ip_signer in
-    let unikernel =
-      Current_deployer.Unikernel.of_docker ~image
-        ~location:(Fpath.v "/unikernel.hvt")
-    in
+    let+ unikernel =
+      Current_deployer.Unikernel.of_docker ~location:(Fpath.v "/unikernel.hvt")
+        image
+    and+ ip_signer = ip_signer in
     {
       E.Config.Pre.service = "service-entry";
       unikernel;
@@ -119,14 +116,10 @@ let pipeline () =
       teleporter deploy_forward
   in
   let staged_signer =
-    Stager.stage_auto ~id:"signer"
-      (module E.Deployed)
-      teleporter deploy_signer
+    Stager.stage_auto ~id:"signer" (module E.Deployed) teleporter deploy_signer
   in
   let staged_entry =
-    Stager.stage_auto ~id:"entry"
-      (module E.Deployed)
-      teleporter deploy_entry
+    Stager.stage_auto ~id:"entry" (module E.Deployed) teleporter deploy_entry
   in
   let publish_no_ports =
     [

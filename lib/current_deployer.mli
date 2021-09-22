@@ -2,9 +2,11 @@ module Unikernel : sig
   type t
   (** The type for an unikernel image *)
 
-  val of_docker : image:Current_docker.Default.Image.t -> location:Fpath.t -> t
+  val of_docker : location:Fpath.t -> Current_docker.Default.Image.t Current.t -> t Current.t
   (** Extract an unikernel image from docker. It's assumed to be an hvt target
       unikernel *)
+
+  val of_git : config_file:Fpath.t Current.t -> Current_git.Commit.t Current.t -> t Current.t
 end
 
 module Port : sig
