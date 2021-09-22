@@ -53,6 +53,5 @@ let get_ip ?(blacklist = []) ~prefix config =
   let open Current.Syntax in
   Current.component "get IP"
   |> let> config = config in
-     let fake_config = Config.v config (Ipaddr.V4.of_string_exn "0.0.0.0") in
-     let key = Config.name fake_config in
+     let key = Config.Pre.id config in
      IpCache.get No_context (key, prefix, blacklist)

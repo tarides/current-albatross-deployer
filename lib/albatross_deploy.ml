@@ -108,8 +108,7 @@ let deploy_albatross ?label config =
   let suffix = match label with None -> "" | Some v -> ": " ^ v in
   Current.component "Deploy to albatross%s" suffix
   |> let> config = config in
-     Deploy.set No_context
-       { name = Config.name config }
+     Deploy.set No_context { name = config.Config.id }
        {
          unikernel = config.unikernel;
          args = config.args;

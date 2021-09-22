@@ -10,7 +10,7 @@ let monitor ?(poll_rate = 10.)
   Current.component "Monitor status"
   |> let> deployment = deployment in
      let config = deployment.config in
-     let name = Config.name config in
+     let name = config.id in
      let vmm_name = Vmm_core.Name.of_string name |> Result.get_ok in
      let ip = config.ip in
      let status = ref `Running in
