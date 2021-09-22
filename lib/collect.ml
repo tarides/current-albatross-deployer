@@ -113,10 +113,8 @@ module OpCollect = struct
       Ok ()
     in
 
-    let* socket = Client.Wire.connect () in
-    Lwt.finalize
-      (fun () -> perform ~socket)
-      (fun () -> Client.Wire.safe_close socket)
+    let* socket = Client.connect () in
+    Lwt.finalize (fun () -> perform ~socket) (fun () -> Client.close socket)
 end
 
 module Collect = Current_cache.Make (OpCollect)

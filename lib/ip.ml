@@ -31,13 +31,13 @@ module IpOp = struct
   let build No_context job (key, prefix, blacklist) =
     let* () = Current.Job.start ~level:Mostly_harmless job in
 
-    let* socket = Client.Wire.connect () in
+    let* socket = Client.connect () in
     let** ip =
       Lwt.finalize
         (fun () ->
           Client.IpManager.request ~socket (key, prefix, blacklist)
           |> Lwt.map Utils.remap_errors)
-        (fun () -> Client.Wire.safe_close socket)
+        (fun () -> Client.close socket)
     in
     let** ip = Lwt.return (Utils.remap_errors ip) in
     Current.Job.log job "Got IP: for %s: %a" key Ipaddr.V4.pp ip.ip;

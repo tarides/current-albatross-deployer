@@ -49,7 +49,7 @@ module OpPublish = struct
               { Current_deployer_api.Types.PortRedirection.source; target })
         ports
     in
-    let* socket = Client.Wire.connect () in
+    let* socket = Client.connect () in
     let** result =
       Lwt.finalize
         (fun () ->
@@ -62,7 +62,7 @@ module OpPublish = struct
               name = service;
             }
           |> Lwt.map Utils.remap_errors)
-        (fun () -> Client.Wire.safe_close socket)
+        (fun () -> Client.close socket)
     in
     let** () = Lwt.return (result |> Utils.remap_errors) in
 

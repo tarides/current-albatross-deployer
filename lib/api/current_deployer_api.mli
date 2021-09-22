@@ -31,14 +31,20 @@ end
 module Types : sig
   module PortRedirection : sig
     type t = { source : int; target : int }
+
+    val pp : t Fmt.t
   end
 
   module Ip : sig
     type t = { ip : Ipaddr.V4.t; tag : string }
+
+    val pp : t Fmt.t
   end
 
   module DeploymentInfo : sig
     type t = { ip : Ip.t; ports : PortRedirection.t list; name : string }
+
+    val pp : t Fmt.t
   end
 end
 

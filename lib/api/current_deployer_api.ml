@@ -64,14 +64,23 @@ end
 module Types = struct
   module PortRedirection = struct
     type t = { source : int; target : int }
+
+    let pp f { source; target } = Fmt.pf f "%d -> %d" source target
   end
 
   module Ip = struct
     type t = { ip : Ipaddr.V4.t; tag : string }
+
+    let pp f { ip; tag } = Fmt.pf f "%s: %a" tag Ipaddr.V4.pp ip
   end
 
   module DeploymentInfo = struct
     type t = { ip : Ip.t; ports : PortRedirection.t list; name : string }
+
+    let pp f { ip; ports; name } =
+      Fmt.pf f "%s@%a@[<v 2>@ %a@]" name Ipaddr.V4.pp ip.ip
+        (Fmt.list PortRedirection.pp)
+        ports
   end
 end
 

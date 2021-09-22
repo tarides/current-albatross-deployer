@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name current-deployer-cli)
+ (libraries lwt.unix logs current_deployer_client cmdliner))

@@ -1,0 +1,4 @@
+(library
+ (name current_deployer_client)
+ (public_name current-deployer.client)
+ (libraries ipaddr str current_deployer_api lwt lwt.unix))

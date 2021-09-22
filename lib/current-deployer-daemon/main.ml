@@ -55,7 +55,7 @@ module State = struct
     mutable iptables : Iptables.Nat.t;
   }
 
-  let v () =
+  let empty () =
     {
       ips = Ipmap.make ();
       deployments = [];
@@ -178,7 +178,7 @@ module State = struct
       { ips = t.ips; deployments = t.deployments |> List.map snd }
 
     let to_state (t : t) =
-      let state = v () in
+      let state = empty () in
       state.ips <- t.ips;
       List.iter
         (fun x -> add_new_deployment state x |> Result.get_ok)
@@ -191,7 +191,9 @@ module State = struct
       (fun () ->
         let+ v = Db.of_file () in
         Db.to_state v)
-      (function exn -> Lwt.fail exn)
+      (function
+        | Unix.Unix_error (Unix.ENOENT, _, _) -> Lwt.return (empty ())
+        | exn -> Lwt.fail exn)
 end
 
 let safe_close fd =
@@ -254,7 +256,8 @@ module Wire = struct
     (Lwt_unix.file_exists socket_path >>= function
      | true -> Lwt_unix.unlink socket_path
      | false ->
-         Bos.OS.Dir.create (Fpath.of_string socket_path |> Result.get_ok)
+         Bos.OS.Dir.create
+           (Fpath.of_string socket_path |> Result.get_ok |> Fpath.parent)
          |> Result.get_ok |> ignore;
          Lwt.return_unit)
     >>= fun () ->
