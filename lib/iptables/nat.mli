@@ -58,6 +58,24 @@ module Match : sig
       t
   end
 
+  module Addrtype : sig
+    type t
+
+    type addrtype =
+      [ `Unspec
+      | `Unicast
+      | `Local
+      | `Broadcast
+      | `Anycast
+      | `Multicast
+      | `Blackhole
+      | `Unreachable
+      | `Prohibit ]
+
+    val v :
+      ?src_type:addrtype negatable -> ?dst_type:addrtype negatable -> unit -> t
+  end
+
   type t
 
   val not : t -> t
@@ -71,6 +89,8 @@ module Match : sig
   val ip_source : ip -> t
 
   val mac_source : Macaddr.t -> t
+
+  val addrtype : Addrtype.t -> t
 
   val protocol :
     [ `Tcp of Tcp.t | `Udp of Udp.t | `Icmp of Icmp.t | `All of All.t ] -> t

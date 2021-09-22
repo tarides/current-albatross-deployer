@@ -184,6 +184,45 @@ module Match = struct
              icmp_type)
   end
 
+  module Addrtype = struct
+    type addrtype =
+      [ `Unspec
+      | `Unicast
+      | `Local
+      | `Broadcast
+      | `Anycast
+      | `Multicast
+      | `Blackhole
+      | `Unreachable
+      | `Prohibit ]
+
+    let addrtype_to_string = function
+      | `Unspec -> "UNSPEC"
+      | `Unicast -> "UNICAST"
+      | `Local -> "LOCAL"
+      | `Broadcast -> "BROADCAST"
+      | `Anycast -> "ANYCAST"
+      | `Multicast -> "MULTICAST"
+      | `Blackhole -> "BLACKHOLE"
+      | `Unreachable -> "UNREACHABLE"
+      | `Prohibit -> "PROHIBIT"
+
+    let addrtype_to_command v = Cmd.v (addrtype_to_string v)
+
+    type t = {
+      src_type : addrtype negatable option;
+      dst_type : addrtype negatable option;
+    }
+
+    let v ?src_type ?dst_type () = { src_type; dst_type }
+
+    let to_command { src_type; dst_type } =
+      Cmd.(
+        v "-m" % "addrtype"
+        %% option_command "--dst-type" addrtype_to_command dst_type
+        %% option_command "--src-type" addrtype_to_command src_type)
+  end
+
   type kind =
     | In_interface of string
     | Out_interface of string
@@ -193,7 +232,7 @@ module Match = struct
     | Protocol of
         [ `Tcp of Tcp.t | `Udp of Udp.t | `Icmp of Icmp.t | `All of All.t ]
 
-  type t = kind negatable
+  type t = NG of kind negatable | V of Addrtype.t
 
   let kind_to_cmd = function
     | In_interface value -> Cmd.(v "--in-interface" % value)
@@ -207,21 +246,27 @@ module Match = struct
         Cmd.(v "--protocol" % "icmp" %% Icmp.to_command icmp)
     | Protocol (`All all) -> Cmd.(v "--protocol" % "all" %% All.to_command all)
 
-  let to_cmd = Negatable.to_command kind_to_cmd
+  let to_cmd = function
+    | NG ng -> Negatable.to_command kind_to_cmd ng
+    | V v -> Addrtype.to_command v
 
-  let not t = Negatable.not t
+  let not = function
+    | NG t -> NG (Negatable.not t)
+    | V _ -> failwith "not supported"
 
-  let in_interface x = Negatable.V (In_interface x)
+  let in_interface x = NG (Negatable.V (In_interface x))
 
-  let out_interface x = Negatable.V (Out_interface x)
+  let out_interface x = NG (Negatable.V (Out_interface x))
 
-  let ip_destination x = Negatable.V (Ip_destination x)
+  let ip_destination x = NG (Negatable.V (Ip_destination x))
 
-  let ip_source x = Negatable.V (Ip_source x)
+  let ip_source x = NG (Negatable.V (Ip_source x))
 
-  let mac_source x = Negatable.V (Mac_source x)
+  let mac_source x = NG (Negatable.V (Mac_source x))
 
-  let protocol x = Negatable.V (Protocol x)
+  let protocol x = NG (Negatable.V (Protocol x))
+
+  let addrtype x = V x
 end
 
 module Action = struct
