@@ -4,10 +4,11 @@ module E = Current_deployer
 
 let pipeline () =
   let open Current.Syntax in
-  let git =
-    Git.Local.v Fpath.(v "/home/lucas/mirage/egarim/dns-resolver.git/")
+  let src =
+    Git.clone
+      ~schedule:(Current_cache.Schedule.v ~valid_for:(Duration.of_hour 1) ())
+      ~gref:"next" "https://github.com/TheLortex/mirage-www.git"
   in
-  let src = Git.Local.commit_of_ref git "refs/heads/master" in
   let get_ip =
     E.get_ip
       ~blacklist:[ Ipaddr.V4.of_string_exn "10.0.0.1" ]
@@ -16,8 +17,9 @@ let pipeline () =
   (* 3: *)
   let config =
     let+ unikernel =
-      Current_deployer.Unikernel.of_docker ~location:(Fpath.v "/unikernel.hvt")
-        image
+      Current_deployer.Unikernel.of_git
+        ~config_file:(Current.return (Fpath.v "src/config.ml"))
+        src
     in
     {
       E.Config.Pre.service = "website";
@@ -45,7 +47,7 @@ let pipeline () =
   (* Publish: staged *)
   let publish =
     E.publish ~service:"website"
-      ~ports:[ { Current_deployer.Port.source = 8080; target = 8080 } ]
+      ~ports:[ { Current_deployer.Port.source = 8888; target = 80 } ]
       deploy
   in
   let deployments = Current.list_seq [ publish ] in
