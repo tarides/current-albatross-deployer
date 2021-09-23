@@ -1,6 +1,5 @@
 module Git = Current_git
 module Docker = Current_docker.Default
-open Lwt.Syntax
 module E = Current_deployer
 
 let pipeline () =

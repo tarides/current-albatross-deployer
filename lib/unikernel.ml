@@ -115,10 +115,12 @@ module Git = struct
     Fmt.str "%a|%a" Fpath.pp config_file Current_git.Commit.pp repo
     |> Digest.string |> Digest.to_hex
 
-  let build_image ~config_file repo =
+  let build_image ~config_file ?(args = Current.return []) repo =
     let dockerfile_content =
-      let+ config_file = config_file in
-      spec config_file |> Obuilder_spec.Docker.dockerfile_of_spec ~buildkit:true
+      let+ config_file = config_file and+ args = args in
+      let extra_flags = String.concat " " args in
+      spec ~extra_flags config_file
+      |> Obuilder_spec.Docker.dockerfile_of_spec ~buildkit:true
     in
     let id =
       let+ config_file = config_file and+ repo = repo in
@@ -141,4 +143,4 @@ module Git = struct
     { location = Fpath.v "/unikernel.hvt"; image }
 end
 
-let of_git ~config_file repo = Git.build_image ~config_file repo
+let of_git ~config_file ?args repo = Git.build_image ~config_file ?args repo
