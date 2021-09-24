@@ -8,7 +8,7 @@ module Unikernel : sig
       unikernel *)
 
   val of_git :
-    ?opam_repository_commit:string Current.t ->
+    ?extra_instructions:Obuilder_spec.op list Current.t ->
     mirage_version:[ `Mirage_3 | `Mirage_4 ] ->
     config_file:Fpath.t Current.t ->
     ?args:string list Current.t ->
