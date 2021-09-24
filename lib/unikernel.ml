@@ -58,7 +58,11 @@ module Git = struct
 
   let cache = [ download_cache; dune_cache ]
 
-  let spec_mirage_4 ?(target = "hvt") ?(extra_flags = "") config_file =
+  let default_opam_repository_commit =
+    "ef82e5bc09e89868e9393bc8ded218b02517876e"
+
+  let spec_mirage_4 ?(target = "hvt") ?(extra_flags = "")
+      ~opam_repository_commit config_file =
     let open Obuilder_spec in
     let base_path = Fpath.v "/home/opam/repo" in
     let config_file_path = Fpath.(base_path // config_file) in
@@ -74,7 +78,8 @@ module Git = struct
           run ~network "sudo apt install -y m4 pkg-config";
           run ~network
             "cd ~/opam-repository && git pull origin master && git reset \
-             --hard ef82e5bc09e89868e9393bc8ded218b02517876e && opam update";
+             --hard %s && opam update"
+            default_opam_repository_commit;
           run ~network
             "opam repo add mirage-dev \
              https://github.com/mirage/mirage-dev.git#0c7c0a14240236bf00c5ccdceab0612f09cbe339";
@@ -93,6 +98,10 @@ module Git = struct
              --extra-repo \
              https://github.com/mirage/opam-overlays.git#f033f8b770097e768cc974cc407e0cd6d7889d63"
             config_file_name target extra_flags;
+          run ~network
+            "cd ~/opam-repository && git pull origin master && git reset \
+             --hard %s && opam update"
+            opam_repository_commit;
           run ~network ~cache "opam config exec -- make depend";
           copy ~from:`Context [ "./" ] ~dst:(Fpath.to_string base_path);
           run ~cache
@@ -113,7 +122,8 @@ module Git = struct
           ~dst:("/unikernel." ^ target);
       ]
 
-  let spec_mirage_3 ?(target = "hvt") ?(extra_flags = "") config_file =
+  let spec_mirage_3 ?(target = "hvt") ?(extra_flags = "")
+      ~opam_repository_commit config_file =
     let open Obuilder_spec in
     let base_path = Fpath.v "/home/opam/repo" in
     let config_file_path = Fpath.(base_path // config_file) in
@@ -129,7 +139,8 @@ module Git = struct
           run ~network "sudo apt install -y m4 pkg-config";
           run ~network
             "cd ~/opam-repository && git pull origin master && git reset \
-             --hard ef82e5bc09e89868e9393bc8ded218b02517876e && opam update";
+             --hard %s && opam update"
+            default_opam_repository_commit;
           env "DUNE_CACHE" "enabled";
           env "DUNE_CACHE_DUPLICATION" "copy";
           env "DUNE_CACHE_TRANSPORT" "direct";
@@ -142,6 +153,10 @@ module Git = struct
           run ~cache
             "opam config exec -- mirage configure -f %s -o unikernel -t %s %s"
             config_file_name target extra_flags;
+          run ~network
+            "cd ~/opam-repository && git pull origin master && git reset \
+             --hard %s && opam update"
+            opam_repository_commit;
           run ~network ~cache "opam config exec -- make depend";
           copy ~from:`Context [ "./" ] ~dst:(Fpath.to_string base_path);
           run ~cache
@@ -165,21 +180,26 @@ module Git = struct
     Fmt.str "%a|%a" Fpath.pp config_file Current_git.Commit.pp repo
     |> Digest.string |> Digest.to_hex
 
-  let build_image ~mirage_version ~config_file ?(args = Current.return []) repo
-      =
+  let build_image
+      ?(opam_repository_commit = Current.return default_opam_repository_commit)
+      ~mirage_version ~config_file ?(args = Current.return []) repo =
     let spec =
       match mirage_version with
       | `Mirage_3 -> spec_mirage_3
       | `Mirage_4 -> spec_mirage_4
     in
     let dockerfile_content =
-      let+ config_file = config_file and+ args = args in
+      let+ config_file = config_file
+      and+ args = args
+      and+ opam_repository_commit = opam_repository_commit in
       let extra_flags = String.concat " " args in
-      spec ~extra_flags config_file
+      spec ~opam_repository_commit ~extra_flags config_file
       |> Obuilder_spec.Docker.dockerfile_of_spec ~buildkit:true
     in
     let id =
       let+ config_file = config_file and+ repo = repo in
+      (* we don't include opam_repository_commit here because we don't want to
+         invalidate the build on each opam repo update *)
       digest ~config_file repo
     in
     let dockerfile =
@@ -199,5 +219,4 @@ module Git = struct
     { location = Fpath.v "/unikernel.hvt"; image }
 end
 
-let of_git ~mirage_version ~config_file ?args repo =
-  Git.build_image ~mirage_version ~config_file ?args repo
+let of_git = Git.build_image
