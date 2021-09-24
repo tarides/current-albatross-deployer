@@ -47,17 +47,19 @@ let of_docker ~location image =
   { location; image }
 
 module Git = struct
-  let spec ?(target = "hvt") ?(extra_flags = "") config_file =
+  let network = [ "host" ]
+
+  let download_cache =
+    Obuilder_spec.Cache.v "opam-archives"
+      ~target:"/home/opam/.opam/download-cache"
+
+  let dune_cache =
+    Obuilder_spec.Cache.v "opam-dune-cache" ~target:"/home/opam/.cache/dune"
+
+  let cache = [ download_cache; dune_cache ]
+
+  let spec_mirage_4 ?(target = "hvt") ?(extra_flags = "") config_file =
     let open Obuilder_spec in
-    let network = [ "host" ] in
-    let download_cache =
-      Obuilder_spec.Cache.v "opam-archives"
-        ~target:"/home/opam/.opam/download-cache"
-    in
-    let dune_cache =
-      Obuilder_spec.Cache.v "opam-dune-cache" ~target:"/home/opam/.cache/dune"
-    in
-    let cache = [ download_cache; dune_cache ] in
     let base_path = Fpath.v "/home/opam/repo" in
     let config_file_path = Fpath.(base_path // config_file) in
     let config_file_dir, config_file_name = Fpath.split_base config_file_path in
@@ -111,11 +113,65 @@ module Git = struct
           ~dst:("/unikernel." ^ target);
       ]
 
+  let spec_mirage_3 ?(target = "hvt") ?(extra_flags = "") config_file =
+    let open Obuilder_spec in
+    let base_path = Fpath.v "/home/opam/repo" in
+    let config_file_path = Fpath.(base_path // config_file) in
+    let config_file_dir, config_file_name = Fpath.split_base config_file_path in
+    let config_file_dir, config_file_name =
+      (Fpath.to_string config_file_dir, Fpath.to_string config_file_name)
+    in
+
+    let build =
+      stage ~from:"ocaml/opam:ubuntu-ocaml-4.11"
+        [
+          user ~uid:1000 ~gid:1000;
+          run ~network "sudo apt install -y m4 pkg-config";
+          run ~network
+            "cd ~/opam-repository && git pull origin master && git reset \
+             --hard ef82e5bc09e89868e9393bc8ded218b02517876e && opam update";
+          env "DUNE_CACHE" "enabled";
+          env "DUNE_CACHE_DUPLICATION" "copy";
+          env "DUNE_CACHE_TRANSPORT" "direct";
+          run ~network ~cache "opam depext -ui ocaml-freestanding mirage.3.10.4";
+          run "mkdir -p %s" config_file_dir;
+          workdir config_file_dir;
+          copy ~from:`Context
+            [ Fpath.to_string config_file ]
+            ~dst:config_file_name;
+          run ~cache
+            "opam config exec -- mirage configure -f %s -o unikernel -t %s %s"
+            config_file_name target extra_flags;
+          run ~network ~cache "opam config exec -- make depend";
+          copy ~from:`Context [ "./" ] ~dst:(Fpath.to_string base_path);
+          run ~cache
+            "opam config exec -- mirage configure -f %s -o unikernel -t %s %s"
+            config_file_name target extra_flags;
+          run ~cache "opam config exec -- make";
+          run "ls";
+        ]
+    in
+    stage ~child_builds:[ ("build", build) ] ~from:"scratch"
+      [
+        copy ~from:(`Build "build")
+          [
+            Fpath.(
+              v config_file_dir / "dist" / ("unikernel." ^ target) |> to_string);
+          ]
+          ~dst:("/unikernel." ^ target);
+      ]
+
   let digest ~config_file repo =
     Fmt.str "%a|%a" Fpath.pp config_file Current_git.Commit.pp repo
     |> Digest.string |> Digest.to_hex
 
-  let build_image ~config_file ?(args = Current.return []) repo =
+  let build_image ~mirage_version ~config_file ?(args = Current.return []) repo
+      =
+    let spec =
+      match mirage_version with
+      | `Mirage_3 -> spec_mirage_3
+      | `Mirage_4 -> spec_mirage_4
+    in
     let dockerfile_content =
       let+ config_file = config_file and+ args = args in
       let extra_flags = String.concat " " args in
@@ -143,4 +199,5 @@ module Git = struct
     { location = Fpath.v "/unikernel.hvt"; image }
 end
 
-let of_git ~config_file ?args repo = Git.build_image ~config_file ?args repo
+let of_git ~mirage_version ~config_file ?args repo =
+  Git.build_image ~mirage_version ~config_file ?args repo

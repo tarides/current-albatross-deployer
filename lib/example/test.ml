@@ -17,7 +17,7 @@ let pipeline () =
   (* 3: *)
   let config =
     let+ unikernel =
-      Current_deployer.Unikernel.of_git
+      Current_deployer.Unikernel.of_git ~mirage_version:`Mirage_4
         ~config_file:(Current.return (Fpath.v "src/config.ml"))
         src
     in

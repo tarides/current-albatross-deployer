@@ -8,6 +8,7 @@ module Unikernel : sig
       unikernel *)
 
   val of_git :
+    mirage_version:[ `Mirage_3 | `Mirage_4 ] ->
     config_file:Fpath.t Current.t ->
     ?args:string list Current.t ->
     Current_git.Commit.t Current.t ->
