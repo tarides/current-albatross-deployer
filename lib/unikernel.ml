@@ -99,7 +99,7 @@ module Git = struct
               https://github.com/mirage/opam-overlays.git#f033f8b770097e768cc974cc407e0cd6d7889d63"
              config_file_name target extra_flags;
          ]
-      @ extra_instructions
+      @ extra_instructions ~network ~cache
       @ [
           run ~network ~cache "opam config exec -- make depend";
           copy ~from:`Context [ "./" ] ~dst:(Fpath.to_string base_path);
@@ -153,7 +153,7 @@ module Git = struct
            run ~cache "opam config exec -- mirage configure -f %s -t %s %s"
              config_file_name target extra_flags;
          ]
-      @ extra_instructions
+      @ extra_instructions ~network ~cache
       @ [
           run ~network ~cache "opam config exec -- make depend";
           copy ~from:`Context [ "./" ] ~dst:(Fpath.to_string base_path);
@@ -174,8 +174,9 @@ module Git = struct
     Fmt.str "%a|%a" Fpath.pp config_file Current_git.Commit.pp repo
     |> Digest.string |> Digest.to_hex
 
-  let build_image ?(extra_instructions = Current.return []) ~mirage_version
-      ~config_file ?(args = Current.return []) repo =
+  let build_image
+      ?(extra_instructions = Current.return (fun ~network:_ ~cache:_ -> []))
+      ~mirage_version ~config_file ?(args = Current.return []) repo =
     let spec =
       match mirage_version with
       | `Mirage_3 -> spec_mirage_3
@@ -211,5 +212,10 @@ module Git = struct
     in
     { location = Fpath.v "/unikernel.hvt"; image }
 end
+
+type instruction_fn =
+  network:string list ->
+  cache:Obuilder_spec.Cache.t list ->
+  Obuilder_spec.op list
 
 let of_git = Git.build_image
