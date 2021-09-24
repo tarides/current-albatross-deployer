@@ -4,22 +4,26 @@ module E = Current_deployer
 
 let pipeline () =
   let open Current.Syntax in
-  let src =
+  let src_mirage_4 =
     Git.clone
       ~schedule:(Current_cache.Schedule.v ~valid_for:(Duration.of_hour 1) ())
       ~gref:"next" "https://github.com/TheLortex/mirage-www.git"
+  in
+  let src_mirage_3 =
+    Git.clone
+      ~schedule:(Current_cache.Schedule.v ~valid_for:(Duration.of_hour 1) ())
+      ~gref:"master" "https://github.com/TheLortex/mirage-www.git"
   in
   let get_ip =
     E.get_ip
       ~blacklist:[ Ipaddr.V4.of_string_exn "10.0.0.1" ]
       ~prefix:(Ipaddr.V4.Prefix.of_string_exn "10.0.0.0/24")
   in
-  (* 3: *)
-  let config =
+  let config_mirage_4 =
     let+ unikernel =
       Current_deployer.Unikernel.of_git ~mirage_version:`Mirage_4
         ~config_file:(Current.return (Fpath.v "src/config.ml"))
-        src
+        src_mirage_4
     in
     {
       E.Config.Pre.service = "website";
@@ -36,22 +40,56 @@ let pipeline () =
       network = "br0";
     }
   in
-  let ip = get_ip config in
-  let config =
-    let+ ip = ip and+ config = config in
+  let config_mirage_3 =
+    let+ unikernel =
+      Current_deployer.Unikernel.of_git ~mirage_version:`Mirage_3
+        ~config_file:(Current.return (Fpath.v "src/config.ml"))
+        src_mirage_3
+    in
+    {
+      E.Config.Pre.service = "website";
+      unikernel;
+      args =
+        (fun ip ->
+          [
+            "--ipv4=" ^ Ipaddr.V4.to_string ip ^ "/24";
+            "--ipv4-gateway=10.0.0.1";
+            "-l";
+            "error";
+          ]);
+      memory = 256;
+      network = "br0";
+    }
+  in
+  let config_mirage_4 =
+    let+ ip = get_ip config_mirage_4 and+ config = config_mirage_4 in
+    E.Config.v config ip
+  in
+  let config_mirage_3 =
+    let+ ip = get_ip config_mirage_3 and+ config = config_mirage_3 in
     E.Config.v config ip
   in
   (* Deployments *)
-  let deploy = E.deploy_albatross ~label:"website" config in
+  let deploy_4 = E.deploy_albatross ~label:"website.4" config_mirage_4 in
+  let deploy_3 = E.deploy_albatross ~label:"website.3" config_mirage_3 in
 
-  (* Publish: staged *)
-  let publish =
-    E.publish ~service:"website"
+  let publish_4 =
+    E.publish ~service:"website.4"
       ~ports:[ { Current_deployer.Port.source = 8888; target = 80 } ]
-      deploy
+      deploy_4
   in
-  let deployments = Current.list_seq [ publish ] in
-  Current.all [ E.collect deployments; E.monitor deploy |> E.is_running ]
+  let publish_3 =
+    E.publish ~service:"website.3"
+      ~ports:[ { Current_deployer.Port.source = 8889; target = 80 } ]
+      deploy_3
+  in
+  let deployments = Current.list_seq [ publish_4; publish_3 ] in
+  Current.all
+    [
+      E.collect deployments;
+      E.monitor deploy_4 |> E.is_running;
+      E.monitor deploy_3 |> E.is_running;
+    ]
 
 let () =
   Logs.(set_level (Some Info));
