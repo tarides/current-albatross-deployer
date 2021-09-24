@@ -150,8 +150,7 @@ module Git = struct
           copy ~from:`Context
             [ Fpath.to_string config_file ]
             ~dst:config_file_name;
-          run ~cache
-            "opam config exec -- mirage configure -f %s -o unikernel -t %s %s"
+          run ~cache "opam config exec -- mirage configure -f %s -t %s %s"
             config_file_name target extra_flags;
           run ~network
             "cd ~/opam-repository && git pull origin master && git reset \
@@ -159,20 +158,16 @@ module Git = struct
             opam_repository_commit;
           run ~network ~cache "opam config exec -- make depend";
           copy ~from:`Context [ "./" ] ~dst:(Fpath.to_string base_path);
-          run ~cache
-            "opam config exec -- mirage configure -f %s -o unikernel -t %s %s"
+          run ~cache "opam config exec -- mirage configure -f %s -t %s %s"
             config_file_name target extra_flags;
           run ~cache "opam config exec -- make";
-          run "ls";
+          run "ls && mv *.%s unikernel.%s && ls" target target;
         ]
     in
     stage ~child_builds:[ ("build", build) ] ~from:"scratch"
       [
         copy ~from:(`Build "build")
-          [
-            Fpath.(
-              v config_file_dir / "dist" / ("unikernel." ^ target) |> to_string);
-          ]
+          [ Fpath.(v config_file_dir / ("unikernel." ^ target) |> to_string) ]
           ~dst:("/unikernel." ^ target);
       ]
 

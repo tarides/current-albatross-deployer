@@ -12,7 +12,7 @@ let pipeline () =
   let src_mirage_3 =
     Git.clone
       ~schedule:(Current_cache.Schedule.v ~valid_for:(Duration.of_hour 1) ())
-      ~gref:"master" "https://github.com/TheLortex/mirage-www.git"
+      ~gref:"master" "https://github.com/mirage/mirage-skeleton.git"
   in
   let get_ip =
     E.get_ip
@@ -43,7 +43,7 @@ let pipeline () =
   let config_mirage_3 =
     let+ unikernel =
       Current_deployer.Unikernel.of_git ~mirage_version:`Mirage_3
-        ~config_file:(Current.return (Fpath.v "src/config.ml"))
+        ~config_file:(Current.return (Fpath.v "tutorial/noop/config.ml"))
         src_mirage_3
     in
     {
