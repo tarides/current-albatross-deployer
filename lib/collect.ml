@@ -38,13 +38,13 @@ module OpCollect = struct
       in
       let deployments_to_keep, deployments_to_remove =
         List.partition
-          (fun (deployment : Current_deployer_api.Types.DeploymentInfo.t) ->
+          (fun (deployment : Iptables_daemon_api.Types.DeploymentInfo.t) ->
             StringSet.mem deployment.name deployed_services)
           deployments
       in
       Current.Job.log job "Roots:";
       List.iter
-        (fun (deployment : Current_deployer_api.Types.DeploymentInfo.t) ->
+        (fun (deployment : Iptables_daemon_api.Types.DeploymentInfo.t) ->
           Current.Job.log job " - %s @%a (%s)" deployment.name Ipaddr.V4.pp
             deployment.ip.ip deployment.ip.tag)
         deployments_to_keep;
@@ -52,14 +52,14 @@ module OpCollect = struct
       Current.Job.log job "Stage 1: remove unused deployments";
       let* () =
         Lwt_list.iter_s
-          (fun (deployment : Current_deployer_api.Types.DeploymentInfo.t) ->
+          (fun (deployment : Iptables_daemon_api.Types.DeploymentInfo.t) ->
             Current.Job.log job "- %s" deployment.name;
             Client.Deployments.remove ~socket deployment.name |> Lwt.map ignore)
           deployments_to_remove
       in
       let ips_to_keep =
         List.map
-          (fun (d : Current_deployer_api.Types.DeploymentInfo.t) ->
+          (fun (d : Iptables_daemon_api.Types.DeploymentInfo.t) ->
             Ipaddr.V4.to_string d.ip.ip)
           deployments_to_keep
         |> StringSet.of_list
@@ -71,12 +71,12 @@ module OpCollect = struct
       in
       let ips_to_remove =
         List.filter
-          (fun (ip : Current_deployer_api.Types.Ip.t) ->
+          (fun (ip : Iptables_daemon_api.Types.Ip.t) ->
             not (StringSet.mem (Ipaddr.V4.to_string ip.ip) ips_to_keep))
           ips
       in
       let removed_ips_tags =
-        List.map (fun ip -> ip.Current_deployer_api.Types.Ip.tag) ips_to_remove
+        List.map (fun ip -> ip.Iptables_daemon_api.Types.Ip.tag) ips_to_remove
         |> StringSet.of_list
       in
       (* Step 2: albatross: remove unikernels starting by a deployment's service
@@ -105,7 +105,7 @@ module OpCollect = struct
       Current.Job.log job "Stage 3: remove unused IPs";
       let+ () =
         Lwt_list.iter_s
-          (fun (ip : Current_deployer_api.Types.Ip.t) ->
+          (fun (ip : Iptables_daemon_api.Types.Ip.t) ->
             Current.Job.log job "- %s @%a" ip.tag Ipaddr.V4.pp ip.ip;
             Client.IpManager.remove ~socket ip.tag |> Lwt.map ignore)
           ips_to_remove

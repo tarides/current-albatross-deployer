@@ -46,7 +46,7 @@ module OpPublish = struct
       List.map
         (function
           | { Port.source; target } ->
-              { Current_deployer_api.Types.PortRedirection.source; target })
+              { Iptables_daemon_api.Types.PortRedirection.source; target })
         ports
     in
     let* socket = Client.connect () in
@@ -56,7 +56,7 @@ module OpPublish = struct
           Client.Deployments.create ~socket
             {
               (* todo: a bit flaky here *)
-              Current_deployer_api.Types.DeploymentInfo.ip =
+              Iptables_daemon_api.Types.DeploymentInfo.ip =
                 { tag = service; ip };
               ports;
               name = service;

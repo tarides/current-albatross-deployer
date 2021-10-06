@@ -7,3 +7,6 @@ _build/
 
 # Local OPAM switch
 _opam/
+
+# ocurrent state folder
+var

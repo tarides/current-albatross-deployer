@@ -1,4 +1,0 @@
-(executable
- (name main)
- (public_name current-deployerd)
- (libraries lwt.unix logs cstruct current_deployer_api iptables))

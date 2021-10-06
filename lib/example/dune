@@ -1,9 +1,0 @@
-(executable
- (name main)
- (modules main stager)
- (libraries current-deployer current_web))
-
-(executable
- (name test)
- (modules test)
- (libraries current-deployer current_web))

@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name current-iptables-daemon)
+ (libraries lwt.unix logs cstruct iptables_daemon_api iptables))

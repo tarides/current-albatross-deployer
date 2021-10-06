@@ -1,0 +1,12 @@
+[Unit]
+Description=Current iptables daemon socket
+PartOf=current-iptables-daemon.service
+
+[Socket]
+ListenStream=%t/current-iptables-daemon/current-iptables-daemon.sock
+SocketGroup=albatross
+SocketMode=0660
+Accept=no
+
+[Install]
+WantedBy=sockets.target

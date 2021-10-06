@@ -1,6 +1,6 @@
 module Git = Current_git
 module Docker = Current_docker.Default
-module E = Current_deployer
+module Deployer = Current_albatross_deployer
 
 let pipeline () =
   let open Current.Syntax in
@@ -15,7 +15,7 @@ let pipeline () =
       ~dockerfile ~label:"docker-build" ~pull:true
   in
   let get_ip =
-    E.get_ip
+    Deployer.get_ip
       ~blacklist:[ Ipaddr.V4.of_string_exn "10.0.0.1" ]
       ~prefix:(Ipaddr.V4.Prefix.of_string_exn "10.0.0.0/24")
   in
@@ -23,11 +23,10 @@ let pipeline () =
   (* 3: forward *)
   let config_forward =
     let+ unikernel =
-      Current_deployer.Unikernel.of_docker ~location:(Fpath.v "/unikernel.hvt")
-        image
+      Deployer.Unikernel.of_docker ~location:(Fpath.v "/unikernel.hvt") image
     in
     {
-      E.Config.Pre.service = "service-forwarder";
+      Deployer.Config.Pre.service = "service-forwarder";
       unikernel;
       args =
         (fun ip ->
@@ -44,16 +43,15 @@ let pipeline () =
   let ip_forward = get_ip config_forward in
   let config_forward =
     let+ ip_forward = ip_forward and+ config_forward = config_forward in
-    E.Config.v config_forward ip_forward
+    Deployer.Config.v config_forward ip_forward
   in
   (* 2: dkim signer *)
   let config_signer =
     let+ unikernel =
-      Current_deployer.Unikernel.of_docker ~location:(Fpath.v "/unikernel.hvt")
-        image
+      Deployer.Unikernel.of_docker ~location:(Fpath.v "/unikernel.hvt") image
     and+ ip_forward = ip_forward in
     {
-      E.Config.Pre.service = "service-signer";
+      Deployer.Config.Pre.service = "service-signer";
       unikernel;
       args =
         (fun ip ->
@@ -69,16 +67,15 @@ let pipeline () =
   let ip_signer = get_ip config_signer in
   let config_signer =
     let+ ip_signer = ip_signer and+ config_signer = config_signer in
-    E.Config.v config_signer ip_signer
+    Deployer.Config.v config_signer ip_signer
   in
   (* 1: entry *)
   let config_entry =
     let+ unikernel =
-      Current_deployer.Unikernel.of_docker ~location:(Fpath.v "/unikernel.hvt")
-        image
+      Deployer.Unikernel.of_docker ~location:(Fpath.v "/unikernel.hvt") image
     and+ ip_signer = ip_signer in
     {
-      E.Config.Pre.service = "service-entry";
+      Deployer.Config.Pre.service = "service-entry";
       unikernel;
       args =
         (fun ip ->
@@ -95,12 +92,14 @@ let pipeline () =
   let ip_entry = get_ip config_entry in
   let config_entry =
     let+ ip_entry = ip_entry and+ config_entry = config_entry in
-    E.Config.v config_entry ip_entry
+    Deployer.Config.v config_entry ip_entry
   in
   (* Deployments *)
-  let deploy_forward = E.deploy_albatross ~label:"forward" config_forward in
-  let deploy_signer = E.deploy_albatross ~label:"signer" config_signer in
-  let deploy_entry = E.deploy_albatross ~label:"entry" config_entry in
+  let deploy_forward =
+    Deployer.deploy_albatross ~label:"forward" config_forward
+  in
+  let deploy_signer = Deployer.deploy_albatross ~label:"signer" config_signer in
+  let deploy_entry = Deployer.deploy_albatross ~label:"entry" config_entry in
   (* Publish: staged *)
   let teleporter =
     [ deploy_forward; deploy_entry; deploy_signer ]
@@ -111,14 +110,18 @@ let pipeline () =
 
   let staged_forward =
     Stager.stage_auto ~id:"forward"
-      (module E.Deployed)
+      (module Deployer.Deployed)
       teleporter deploy_forward
   in
   let staged_signer =
-    Stager.stage_auto ~id:"signer" (module E.Deployed) teleporter deploy_signer
+    Stager.stage_auto ~id:"signer"
+      (module Deployer.Deployed)
+      teleporter deploy_signer
   in
   let staged_entry =
-    Stager.stage_auto ~id:"entry" (module E.Deployed) teleporter deploy_entry
+    Stager.stage_auto ~id:"entry"
+      (module Deployer.Deployed)
+      teleporter deploy_entry
   in
   let publish_no_ports =
     [
@@ -127,16 +130,16 @@ let pipeline () =
       ("signer-live", staged_signer.live);
       ("signer-current", staged_signer.current);
     ]
-    |> List.map (fun (service, current) -> E.publish ~service current)
+    |> List.map (fun (service, current) -> Deployer.publish ~service current)
   in
   let publish_entry_live =
-    E.publish ~service:"entry-live"
-      ~ports:[ { Current_deployer.Port.source = 25; target = 25 } ]
+    Deployer.publish ~service:"entry-live"
+      ~ports:[ { Deployer.Port.source = 25; target = 25 } ]
       staged_entry.live
   in
   let publish_entry_current =
-    E.publish ~service:"entry-current"
-      ~ports:[ { Current_deployer.Port.source = 2525; target = 25 } ]
+    Deployer.publish ~service:"entry-current"
+      ~ports:[ { Deployer.Port.source = 2525; target = 25 } ]
       staged_entry.current
   in
   let all_deployments =
@@ -146,9 +149,11 @@ let pipeline () =
   let all_unikernels_monitors =
     [ staged_forward; staged_signer; staged_entry ]
     |> List.map (fun (t : _ Stager.staged) -> [ t.live; t.current ])
-    |> List.concat |> List.map E.monitor |> List.map E.is_running |> Current.all
+    |> List.concat |> List.map Deployer.monitor
+    |> List.map Deployer.is_running
+    |> Current.all
   in
-  Current.all [ E.collect all_deployments; all_unikernels_monitors ]
+  Current.all [ Deployer.collect all_deployments; all_unikernels_monitors ]
 
 let () =
   Logs.(set_level (Some Info));

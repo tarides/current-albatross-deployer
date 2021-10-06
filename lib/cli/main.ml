@@ -2,10 +2,10 @@ open Lwt.Syntax
 
 let run_with_socket fn =
   let program =
-    let* socket = Current_deployer_client.connect () in
+    let* socket = Iptables_client.connect () in
     Lwt.finalize
       (fun () -> fn socket)
-      (fun () -> Current_deployer_client.close socket)
+      (fun () -> Iptables_client.close socket)
   in
   Lwt_main.run program
 
@@ -22,8 +22,8 @@ let ip_list =
   Term.(
     const (fun () ->
         run_with_socket (fun socket ->
-            Current_deployer_client.IpManager.list ~socket ())
-        |> print_result Fmt.(list Current_deployer_api.Types.Ip.pp))
+            Iptables_client.IpManager.list ~socket ())
+        |> print_result Fmt.(list Iptables_daemon_api.Types.Ip.pp))
     $ const ())
 
 let ipv4_prefix = Arg.conv (Ipaddr.V4.Prefix.of_string, Ipaddr.V4.Prefix.pp)
@@ -40,29 +40,29 @@ let ip_query =
   Term.(
     const (fun tag prefix blacklist ->
         run_with_socket (fun socket ->
-            Current_deployer_client.IpManager.request ~socket
+            Iptables_client.IpManager.request ~socket
               (tag, prefix, blacklist))
         |> print_result (fun f -> function
              | Error `Full -> Fmt.pf f "No ip available"
-             | Ok v -> Current_deployer_api.Types.Ip.pp f v))
+             | Ok v -> Iptables_daemon_api.Types.Ip.pp f v))
     $ tag $ prefix $ blacklist)
 
 let ip_free =
   Term.(
     const (fun tag ->
         run_with_socket (fun socket ->
-            Current_deployer_client.IpManager.remove ~socket tag)
+            Iptables_client.IpManager.remove ~socket tag)
         |> print_result (fun f -> function
              | Error `Not_found -> Fmt.pf f "Tag not found"
-             | Ok v -> Current_deployer_api.Types.Ip.pp f v))
+             | Ok v -> Iptables_daemon_api.Types.Ip.pp f v))
     $ tag)
 
 let deployment_list =
   Term.(
     const (fun () ->
         run_with_socket (fun socket ->
-            Current_deployer_client.Deployments.list ~socket ())
-        |> print_result Fmt.(list Current_deployer_api.Types.DeploymentInfo.pp))
+            Iptables_client.Deployments.list ~socket ())
+        |> print_result Fmt.(list Iptables_daemon_api.Types.DeploymentInfo.pp))
     $ const ())
 
 let service = Arg.(required @@ opt (some string) None @@ info [ "service" ])
@@ -77,10 +77,10 @@ let port_redirection =
             try
               let source = int_of_string source in
               let target = int_of_string target in
-              Ok { Current_deployer_api.Types.PortRedirection.source; target }
+              Ok { Iptables_daemon_api.Types.PortRedirection.source; target }
             with Failure _ -> Error (`Msg "Could not parse one of the ports"))
         | _ -> Error (`Msg "Not a pair of values")),
-      Current_deployer_api.Types.PortRedirection.pp )
+      Iptables_daemon_api.Types.PortRedirection.pp )
 
 let ports = Arg.(value @@ opt_all port_redirection [] @@ info [ "p" ])
 
@@ -88,12 +88,12 @@ let deployment_add =
   Term.(
     const (fun ip name ports ->
         (* TODO: a bit flaky here*)
-        let ip = { Current_deployer_api.Types.Ip.ip; tag = name } in
+        let ip = { Iptables_daemon_api.Types.Ip.ip; tag = name } in
         let info =
-          { Current_deployer_api.Types.DeploymentInfo.ip; name; ports }
+          { Iptables_daemon_api.Types.DeploymentInfo.ip; name; ports }
         in
         run_with_socket (fun socket ->
-            Current_deployer_client.Deployments.create ~socket info)
+            Iptables_client.Deployments.create ~socket info)
         |> print_result (fun f -> function
              | Error (`Port_already_allocated n) ->
                  Fmt.pf f "Port %d is already allocated" n
@@ -104,17 +104,17 @@ let deployment_remove =
   Term.(
     const (fun service ->
         run_with_socket (fun socket ->
-            Current_deployer_client.Deployments.remove ~socket service)
+            Iptables_client.Deployments.remove ~socket service)
         |> print_result (fun f -> function
              | Error `Not_found -> Fmt.pf f "Service not found"
-             | Ok v -> Current_deployer_api.Types.DeploymentInfo.pp f v))
+             | Ok v -> Iptables_daemon_api.Types.DeploymentInfo.pp f v))
     $ service)
 
 let () =
   Term.(
     exit
     @@ eval_choice
-         Term.(const (), Term.info "current-deployer-cli")
+         Term.(const (), Term.info "iptables-cli")
          [
            (ip_list, Term.info ~doc:"list allocated IPs" "ip-list");
            ( ip_query,
