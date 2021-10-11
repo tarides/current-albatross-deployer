@@ -1,4 +1,4 @@
 (library
- (name current_deployer_client)
- (public_name current-deployer.client)
- (libraries ipaddr str current_deployer_api lwt lwt.unix))
+ (name iptables_client)
+ (public_name current-albatross-deployer.iptables.client)
+ (libraries ipaddr str iptables_daemon_api lwt lwt.unix))

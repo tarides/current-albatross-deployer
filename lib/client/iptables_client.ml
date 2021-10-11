@@ -1,23 +1,22 @@
 open Lwt.Infix
 
+let socket_path =
+  "/var/run/current-iptables-daemon/current-iptables-daemon.sock"
+
 module Wire = struct
   let safe_close fd =
     Lwt.catch (fun () -> Lwt_unix.close fd) (fun _ -> Lwt.return_unit)
 
   let connect () =
-    let sockaddr =
-      Lwt_unix.ADDR_UNIX "/var/run/current-deployer/current-deployerd.sock"
-    in
+    let sockaddr = Lwt_unix.ADDR_UNIX socket_path in
     let c = Lwt_unix.(socket PF_UNIX SOCK_STREAM 0) in
     Lwt_unix.set_close_on_exec c;
     Lwt.catch
       (fun () -> Lwt_unix.(connect c sockaddr) >|= fun () -> c)
       (fun e ->
         Logs.warn (fun m ->
-            m
-              "error %s connecting to socket \
-               /var/run/current-deployer/current-deployerd.sock"
-              (Printexc.to_string e));
+            m "error %s connecting to socket %s" (Printexc.to_string e)
+              socket_path);
         safe_close c >|= fun () -> raise e)
 
   let write ~socket data =
@@ -79,7 +78,7 @@ type socket = Lwt_unix.file_descr
 let query rpc ~socket x =
   let open Lwt.Syntax in
   let ( let** ) = Lwt_result.bind in
-  let module Rpc = Current_deployer_api.Rpc in
+  let module Rpc = Iptables_daemon_api.Rpc in
   let tag = Rpc.Tag.v rpc in
   let inj, proj = Rpc.get_client rpc in
   let req = inj x |> Rpc.Tag.(add tag) in
@@ -90,7 +89,7 @@ let query rpc ~socket x =
   Lwt.return (proj response |> Result.map_error (fun e -> (e :> wire_error)))
 
 module IpManager = struct
-  module Spec = Current_deployer_api.Spec
+  module Spec = Iptables_daemon_api.Spec
 
   let list = query Spec.IpManager.list
 
@@ -100,7 +99,7 @@ module IpManager = struct
 end
 
 module Deployments = struct
-  module Spec = Current_deployer_api.Spec
+  module Spec = Iptables_daemon_api.Spec
 
   let list = query Spec.Deployments.list
 

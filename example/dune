@@ -1,0 +1,14 @@
+(executable
+ (name main)
+ (modules main stager)
+ (libraries current-albatross-deployer current_web))
+
+(executable
+ (name test)
+ (modules test)
+ (libraries current-albatross-deployer current_web))
+
+(env
+ (dev
+  (flags
+   (:standard -warn-error -A -w -40-4))))

@@ -92,5 +92,5 @@ val publish :
 (** Publish a service, optionally exposing ports to the deployed unikernel *)
 
 val collect : Published.t list Current.t -> unit Current.t
-(** Garbage collect IPs and deployments managed by current-deployer and kill
-    corresponding unikernels. Only specified deployments are kept. *)
+(** Garbage collect IPs and deployments managed by current-albatross-deployer
+    and kill corresponding unikernels. Only specified deployments are kept. *)

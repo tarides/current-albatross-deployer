@@ -1,14 +1,14 @@
 open Lwt.Syntax
 
-let socket_path = "/var/run/current-deployer/current-deployerd.sock"
+let socket_path = "/var/run/current-iptables-daemon/current-iptables-daemon.sock"
 
-let db_path = "/var/lib/current-deployer/db"
+let db_path = "/var/lib/current-iptables-daemon/db"
 
 module Config = struct
   type t = { network : Ipaddr.V4.Prefix.t }
 end
 
-module Types = Current_deployer_api.Types
+module Types = Iptables_daemon_api.Types
 
 module Ipmap = struct
   module Map = Map.Make (Ipaddr.V4)
@@ -272,13 +272,13 @@ module Wire = struct
 end
 
 module Handler = struct
-  module Rpc = Current_deployer_api.Rpc
+  module Rpc = Iptables_daemon_api.Rpc
 
   type t = {
     tag : Rpc.Tag.t;
     handle :
       Rpc.untagged_buffer ->
-      (Rpc.untagged_buffer, Current_deployer_api.Rpc.error) result;
+      (Rpc.untagged_buffer, Iptables_daemon_api.Rpc.error) result;
   }
 
   let implement rpc f =
@@ -326,7 +326,7 @@ let handle ~handlers socket =
   Logs.app (fun f -> f "Client left.")
 
 let handlers ~state =
-  let module Spec = Current_deployer_api.Spec in
+  let module Spec = Iptables_daemon_api.Spec in
   Handler.
     [
       (* IPs *)

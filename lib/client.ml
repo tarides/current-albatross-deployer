@@ -1,8 +1,8 @@
 
 open Lwt.Syntax
 
-module IpManager = Current_deployer_client.IpManager
-module Deployments = Current_deployer_client.Deployments
+module IpManager = Iptables_client.IpManager
+module Deployments = Iptables_client.Deployments
 
 module Albatross = struct
   let connect name (cmd : Vmm_commands.t) =
@@ -76,7 +76,7 @@ end
 
 let job = Lwt.return_unit
 
-let connect = Current_deployer_client.connect
+let connect = Iptables_client.connect
 
-let close = Current_deployer_client.close
+let close = Iptables_client.close
 
