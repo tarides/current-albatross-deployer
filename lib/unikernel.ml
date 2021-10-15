@@ -59,7 +59,7 @@ module Git = struct
   let cache = [ download_cache; dune_cache ]
 
   let default_opam_repository_commit =
-    "ef82e5bc09e89868e9393bc8ded218b02517876e"
+    "16833ec44cc5c54f6ed6a80da3185d050fbe5d09"
 
   let spec_mirage_4 ?(target = "hvt") ?(extra_flags = "") ~extra_instructions
       config_file =
