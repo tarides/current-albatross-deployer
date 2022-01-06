@@ -59,9 +59,12 @@ module Git = struct
   let cache = [ download_cache; dune_cache ]
 
   let default_opam_repository_commit =
-    "16833ec44cc5c54f6ed6a80da3185d050fbe5d09"
+    let+ opam_repository = 
+      Current_git.clone ~schedule:(Current_cache.Schedule.v ()) "https://github.com/ocaml/opam-repository.git" 
+    in
+    Current_git.Commit.id opam_repository |> Current_git.Commit_id.hash
 
-  let spec_mirage_4 ?(target = "hvt") ?(extra_flags = "") ~extra_instructions
+  let spec_mirage_4 ?(target = "hvt") ?(extra_flags = "") ~opam_repository_commit ~extra_instructions
       config_file =
     let open Obuilder_spec in
     let base_path = Fpath.v "/home/opam/repo" in
@@ -79,7 +82,7 @@ module Git = struct
            run ~network
              "cd ~/opam-repository && git pull origin master && git reset \
               --hard %s && opam update"
-             default_opam_repository_commit;
+              opam_repository_commit;
            run ~network
              "opam repo add mirage-dev \
               https://github.com/mirage/mirage-dev.git#0c7c0a14240236bf00c5ccdceab0612f09cbe339";
@@ -121,7 +124,7 @@ module Git = struct
           ~dst:("/unikernel." ^ target);
       ]
 
-  let spec_mirage_3 ?(target = "hvt") ?(extra_flags = "") ~extra_instructions
+  let spec_mirage_3 ?(target = "hvt") ?(extra_flags = "") ~opam_repository_commit ~extra_instructions
       config_file =
     let open Obuilder_spec in
     let base_path = Fpath.v "/home/opam/repo" in
@@ -139,22 +142,22 @@ module Git = struct
            run ~network
              "cd ~/opam-repository && git pull origin master && git reset \
               --hard %s && opam update"
-             default_opam_repository_commit;
+             opam_repository_commit;
            env "DUNE_CACHE" "enabled";
            env "DUNE_CACHE_DUPLICATION" "copy";
            env "DUNE_CACHE_TRANSPORT" "direct";
            run ~network ~cache
-             "opam depext -ui ocaml-freestanding mirage.3.10.4";
+             "opam depext -ui ocaml-freestanding \"mirage<4.0.0\"";
            run "mkdir -p %s" config_file_dir;
            workdir config_file_dir;
            copy ~from:`Context
              [ Fpath.to_string config_file ]
              ~dst:config_file_name;
-           run ~cache "opam config exec -- mirage configure -f %s -t %s %s"
-             config_file_name target extra_flags;
          ]
       @ extra_instructions ~network ~cache
       @ [
+          run ~cache "opam config exec -- mirage configure -f %s -t %s %s"
+            config_file_name target extra_flags;
           run ~network ~cache "opam config exec -- make depend";
           copy ~from:`Context [ "./" ] ~dst:(Fpath.to_string base_path);
           run ~cache "opam config exec -- mirage configure -f %s -t %s %s"
@@ -176,6 +179,7 @@ module Git = struct
 
   let build_image
       ?(extra_instructions = Current.return (fun ~network:_ ~cache:_ -> []))
+      ?(opam_repository_commit = default_opam_repository_commit)
       ~mirage_version ~config_file ?(args = Current.return []) repo =
     let spec =
       match mirage_version with
@@ -185,9 +189,10 @@ module Git = struct
     let dockerfile_content =
       let+ config_file = config_file
       and+ args = args
-      and+ extra_instructions = extra_instructions in
+      and+ extra_instructions = extra_instructions
+      and+ opam_repository_commit = opam_repository_commit in
       let extra_flags = String.concat " " args in
-      spec ~extra_instructions ~extra_flags config_file
+      spec ~extra_instructions ~extra_flags ~opam_repository_commit config_file
       |> Obuilder_spec.Docker.dockerfile_of_spec ~buildkit:true
     in
     let id =

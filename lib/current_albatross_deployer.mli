@@ -14,6 +14,7 @@ module Unikernel : sig
 
   val of_git :
     ?extra_instructions:instruction_fn Current.t ->
+    ?opam_repository_commit:string Current.t ->
     mirage_version:[ `Mirage_3 | `Mirage_4 ] ->
     config_file:Fpath.t Current.t ->
     ?args:string list Current.t ->
