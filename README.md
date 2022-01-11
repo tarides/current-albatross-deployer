@@ -142,3 +142,7 @@ let collected: unit Current.t = collect (Current.list_seq [published])
 ## Contributing
 
 Take a look at our [Contributing Guide](CONTRIBUTING.md).
+
+## Acknowledgement
+
+`current-albatross-deployer` has received funding from the Next Generation Internet Initiative (NGI) within the framework of the DAPSI Project
