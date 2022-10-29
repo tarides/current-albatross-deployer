@@ -28,7 +28,7 @@ module Albatross = struct
       (fun () ->
         let** _, response =
           Vmm_lwt.read_wire fd
-          |> Lwt_result.map_err (fun _ -> `Msg "todo: map error")
+          |> Lwt_result.map_error (fun _ -> `Msg "todo: map error")
         in
         match response with
         | `Success (`Unikernel_info v) -> Lwt.return_ok v
