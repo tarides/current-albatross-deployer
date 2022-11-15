@@ -10,11 +10,8 @@ module type S = sig
   type t
 
   val digest : t -> string
-
   val marshal : t -> string
-
   val unmarshal : string -> t
-
   val pp : t Fmt.t
 end
 
@@ -31,11 +28,8 @@ module Op (M : S) = struct
   module Outcome = M
 
   let pp f (k, _) = Fmt.pf f "Stager %s" k
-
   let id = "stager"
-
   let auto_cancel = true
-
   let latched = true
 
   let run (Value v) job _ _key =
@@ -58,7 +52,6 @@ module OpActivator = struct
   type t = No_context
 
   let id = "activator"
-
   let pp f (k, _) = Fmt.pf f "activator %s" k
 
   module Key = Current.String
@@ -66,7 +59,6 @@ module OpActivator = struct
   module Outcome = Current.String
 
   let auto_cancel = false
-
   let latched = true
 
   let run No_context job _k v =

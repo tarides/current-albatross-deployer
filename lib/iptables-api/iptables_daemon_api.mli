@@ -1,8 +1,6 @@
 module Rpc : sig
   type ('a, 'b) t
-
   type error = [ `Parse of string ]
-
   type untagged_buffer
 
   val get_client :
@@ -15,15 +13,12 @@ module Rpc : sig
 
   module Tag : sig
     type ('a, 'b) rpc = ('a, 'b) t
-
     type t
 
     module Map : Map.S with type key = t
 
     val v : _ rpc -> t
-
     val strip : Cstruct.t -> t * untagged_buffer
-
     val add : t -> untagged_buffer -> Cstruct.t
   end
 end

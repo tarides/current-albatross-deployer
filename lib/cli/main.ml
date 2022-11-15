@@ -3,9 +3,7 @@ open Lwt.Syntax
 let run_with_socket fn =
   let program =
     let* socket = Iptables_client.connect () in
-    Lwt.finalize
-      (fun () -> fn socket)
-      (fun () -> Iptables_client.close socket)
+    Lwt.finalize (fun () -> fn socket) (fun () -> Iptables_client.close socket)
   in
   Lwt_main.run program
 
@@ -27,21 +25,16 @@ let ip_list =
     $ const ())
 
 let ipv4_prefix = Arg.conv (Ipaddr.V4.Prefix.of_string, Ipaddr.V4.Prefix.pp)
-
 let ipv4 = Arg.conv (Ipaddr.V4.of_string, Ipaddr.V4.pp)
-
 let tag = Arg.(required @@ opt (some string) None @@ info [ "tag" ])
-
 let prefix = Arg.(required @@ opt (some ipv4_prefix) None @@ info [ "prefix" ])
-
 let blacklist = Arg.(value @@ opt_all ipv4 [] @@ info [ "except" ])
 
 let ip_query =
   Term.(
     const (fun tag prefix blacklist ->
         run_with_socket (fun socket ->
-            Iptables_client.IpManager.request ~socket
-              (tag, prefix, blacklist))
+            Iptables_client.IpManager.request ~socket (tag, prefix, blacklist))
         |> print_result (fun f -> function
              | Error `Full -> Fmt.pf f "No ip available"
              | Ok v -> Iptables_daemon_api.Types.Ip.pp f v))
@@ -66,7 +59,6 @@ let deployment_list =
     $ const ())
 
 let service = Arg.(required @@ opt (some string) None @@ info [ "service" ])
-
 let ip = Arg.(required @@ opt (some ipv4) None @@ info [ "ip" ])
 
 let port_redirection =

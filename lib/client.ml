@@ -1,6 +1,4 @@
-
 open Lwt.Syntax
-
 module IpManager = Iptables_client.IpManager
 module Deployments = Iptables_client.Deployments
 
@@ -75,8 +73,5 @@ module Albatross = struct
 end
 
 let job = Lwt.return_unit
-
 let connect = Iptables_client.connect
-
 let close = Iptables_client.close
-

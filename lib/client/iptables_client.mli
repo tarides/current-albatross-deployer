@@ -1,5 +1,4 @@
 type wire_error = [ `Eof | `Exception | `Parse of string | `Toomuch ]
-
 type socket
 
 module IpManager : sig
@@ -42,5 +41,4 @@ module Deployments : sig
 end
 
 val connect : unit -> socket Lwt.t
-
 val close : socket -> unit Lwt.t

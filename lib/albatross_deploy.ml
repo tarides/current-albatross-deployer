@@ -13,9 +13,7 @@ module Deployed = struct
   type t = { config : Config.t } [@@deriving yojson]
 
   let marshal t = to_yojson t |> Yojson.Safe.to_string
-
   let unmarshal t = Yojson.Safe.from_string t |> of_yojson |> Result.get_ok
-
   let digest = marshal
 
   let pp f { config; _ } =
@@ -90,7 +88,6 @@ module OpDeploy = struct
     Lwt_result.return ()
 
   let pp f (key, _v) = Fmt.pf f "@[<v2>deploy %s@]" key.Key.name
-
   let auto_cancel = true
 end
 

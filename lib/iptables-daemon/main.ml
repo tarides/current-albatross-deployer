@@ -1,6 +1,7 @@
 open Lwt.Syntax
 
-let socket_path = "/var/run/current-iptables-daemon/current-iptables-daemon.sock"
+let socket_path =
+  "/var/run/current-iptables-daemon/current-iptables-daemon.sock"
 
 let db_path = "/var/lib/current-iptables-daemon/db"
 
@@ -156,7 +157,6 @@ module State = struct
 
   module Db = struct
     type state = t
-
     type t = { ips : string Ipmap.t; deployments : Types.DeploymentInfo.t list }
 
     let of_file () : t Lwt.t =

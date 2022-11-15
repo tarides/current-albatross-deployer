@@ -7,9 +7,7 @@ module OpCollect = struct
   type t = No_context
 
   let id = "collect"
-
   let pp f _ = Fmt.string f "collect"
-
   let auto_cancel = false
 
   module Key = struct

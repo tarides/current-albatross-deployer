@@ -1,11 +1,9 @@
 module Rpc = struct
   type ('a, 'b) t = { tag : string; query : 'a Asn.t; resp : 'b Asn.t }
-
   type untagged_buffer = Cstruct.t
 
   module Tag = struct
     type ('a, 'b) rpc = ('a, 'b) t
-
     type t = string
 
     module Map = Map.Make (String)

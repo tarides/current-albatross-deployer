@@ -13,5 +13,4 @@ let match' =
     protocol (`Tcp (Tcp.v ~dport:(Nat.Negatable.V [ Nat.Port 8080 ]) ())))
 
 let rule = Nat.Rule.v [ match' ] action
-
 let ipt = Nat.init ~name:"ALBATROSS" [ rule ]
