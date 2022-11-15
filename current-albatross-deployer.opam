@@ -11,7 +11,7 @@ depends: [
   "albatross" {>= "1.5.1"}
   "obuilder-spec" {>= "0.5"}
   "ocaml" {>= "4.08.0"}
-  "dune"
+  "dune" {>= "2.9.0"}
   "odoc" {with-doc}
   "asn1-combinators" {>= "0.2.6"}
   "bos" {>= "0.2.0"}
@@ -29,7 +29,7 @@ depends: [
   "alcotest" {>= "1.4.0" & with-test}
 ]
 build: [
-  ["dune" "subst"] {pinned}
+  ["dune" "subst"] {dev}
   [
     "dune"
     "build"
