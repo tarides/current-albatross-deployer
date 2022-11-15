@@ -6,7 +6,7 @@ authors: "Lucas Pluvinage"
 dev-repo: "git+https://github.com/TheLortex/current-albatross-deployer.git"
 license: "ISC"
 depends: [
-  "albatross"
+  "albatross" {>= "1.5.1"}
   "obuilder-spec"
   "ocaml" {>= "4.08.0"}
   "dune"

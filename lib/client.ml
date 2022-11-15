@@ -65,7 +65,7 @@ module Albatross = struct
               cpuid = 0;
               memory;
               block_devices = [];
-              bridges = [ ("service", Some network) ];
+              bridges = [ ("service", Some network, None) ];
               argv = Some args;
             }))
     in
