@@ -72,7 +72,6 @@ module Wire = struct
 end
 
 type wire_error = [ `Eof | `Toomuch | `Exception | `Parse of string ]
-
 type socket = Lwt_unix.file_descr
 
 let query rpc ~socket x =
@@ -92,9 +91,7 @@ module IpManager = struct
   module Spec = Iptables_daemon_api.Spec
 
   let list = query Spec.IpManager.list
-
   let request = query Spec.IpManager.request
-
   let remove = query Spec.IpManager.free
 end
 
@@ -102,12 +99,9 @@ module Deployments = struct
   module Spec = Iptables_daemon_api.Spec
 
   let list = query Spec.Deployments.list
-
   let create = query Spec.Deployments.create
-
   let remove = query Spec.Deployments.delete
 end
 
 let connect = Wire.connect
-
 let close = Wire.safe_close

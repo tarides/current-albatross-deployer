@@ -15,7 +15,6 @@ module Multiport = struct
 end
 
 type port_or_multiport = Multiport.t
-
 type ip = Ip of Ipaddr.V4.t | Prefix of Ipaddr.V4.Prefix.t
 
 module Ip = struct
@@ -255,17 +254,11 @@ module Match = struct
     | V _ -> failwith "not supported"
 
   let in_interface x = NG (Negatable.V (In_interface x))
-
   let out_interface x = NG (Negatable.V (Out_interface x))
-
   let ip_destination x = NG (Negatable.V (Ip_destination x))
-
   let ip_source x = NG (Negatable.V (Ip_source x))
-
   let mac_source x = NG (Negatable.V (Mac_source x))
-
   let protocol x = NG (Negatable.V (Protocol x))
-
   let addrtype x = V x
 end
 
@@ -277,11 +270,8 @@ module Action = struct
     | Redirect of port
 
   let source_nat ?port ip = Source_nat { port; ip }
-
   let masquerade = Masquerade
-
   let destination_nat ?port ip = Destination_nat { port; ip }
-
   let redirect port = Redirect port
 
   let port_to_string_after_ip port =
@@ -305,7 +295,6 @@ end
 
 module Rule = struct
   type t = { matches : Match.t list; action : Action.t }
-
   type handle = t
 
   let v matches action = { matches; action }

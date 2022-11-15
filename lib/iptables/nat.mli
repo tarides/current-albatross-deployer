@@ -1,7 +1,5 @@
 type port = Port of int | Port_range of int * int
-
 type port_or_multiport = port list
-
 type ip = Ip of Ipaddr.V4.t | Prefix of Ipaddr.V4.Prefix.t
 
 module Negatable : sig
@@ -15,9 +13,7 @@ type 'a negatable = 'a Negatable.t
 module Match : sig
   module Tcp : sig
     type t
-
     type flag = SYN | ACK | FIN | RST | URG | PSH | ALL | NONE
-
     type state = ESTABLISHED | NEW | INVALID | RELATED
 
     val v :
@@ -79,17 +75,11 @@ module Match : sig
   type t
 
   val not : t -> t
-
   val in_interface : string -> t
-
   val out_interface : string -> t
-
   val ip_destination : ip -> t
-
   val ip_source : ip -> t
-
   val mac_source : Macaddr.t -> t
-
   val addrtype : Addrtype.t -> t
 
   val protocol :
@@ -100,27 +90,21 @@ module Action : sig
   type t
 
   val source_nat : ?port:port -> Ipaddr.V4.t -> t
-
   val masquerade : t
-
   val destination_nat : ?port:port -> Ipaddr.V4.t -> t
-
   val redirect : port -> t
 end
 
 module Rule : sig
   type t
-
   type handle
 
   val v : Match.t list -> Action.t -> t
-
   val to_cmd : t -> Bos.Cmd.t
 end
 
 module Raw : sig
   val add_rule : chain:string -> Rule.t -> unit
-
   val remove_rule : chain:string -> Rule.t -> unit
 end
 
@@ -131,7 +115,6 @@ val init : name:string -> Rule.t list -> t
 
 (* Add a new rule to the chain *)
 val add_rule : t -> Rule.t -> Rule.handle
-
 val add_rules : t -> Rule.t list -> Rule.handle list
 
 (* Remove a rule from the chain *)

@@ -1,12 +1,11 @@
 open Lwt.Syntax
 
-let (let**) = Lwt_result.bind
+let ( let** ) = Lwt_result.bind
 
 module IpOp = struct
   type t = No_context
 
   let id = "get-ip"
-
   let auto_cancel = true
 
   module Key = struct
@@ -24,7 +23,6 @@ module IpOp = struct
     type t = Ipaddr.V4.t
 
     let marshal = Ipaddr.V4.to_string
-
     let unmarshal = Ipaddr.V4.of_string_exn
   end
 

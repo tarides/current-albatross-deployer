@@ -59,13 +59,15 @@ module Git = struct
   let cache = [ download_cache; dune_cache ]
 
   let default_opam_repository_commit =
-    let+ opam_repository = 
-      Current_git.clone ~schedule:(Current_cache.Schedule.v ()) "https://github.com/ocaml/opam-repository.git" 
+    let+ opam_repository =
+      Current_git.clone
+        ~schedule:(Current_cache.Schedule.v ())
+        "https://github.com/ocaml/opam-repository.git"
     in
     Current_git.Commit.id opam_repository |> Current_git.Commit_id.hash
 
-  let spec_mirage_4 ?(target = "hvt") ?(extra_flags = "") ~opam_repository_commit ~extra_instructions
-      config_file =
+  let spec_mirage_4 ?(target = "hvt") ?(extra_flags = "")
+      ~opam_repository_commit ~extra_instructions config_file =
     let open Obuilder_spec in
     let base_path = Fpath.v "/home/opam/repo" in
     let config_file_path = Fpath.(base_path // config_file) in
@@ -82,7 +84,7 @@ module Git = struct
            run ~network
              "cd ~/opam-repository && git pull origin master && git reset \
               --hard %s && opam update"
-              opam_repository_commit;
+             opam_repository_commit;
            run ~network
              "opam repo add mirage-dev \
               https://github.com/mirage/mirage-dev.git#0c7c0a14240236bf00c5ccdceab0612f09cbe339";
@@ -114,7 +116,9 @@ module Git = struct
           run ~cache "opam config exec -- mirage build";
         ]
     in
-    stage ~child_builds:[ ("build", build) ] ~from:"scratch"
+    stage
+      ~child_builds:[ ("build", build) ]
+      ~from:"scratch"
       [
         copy ~from:(`Build "build")
           [
@@ -124,8 +128,8 @@ module Git = struct
           ~dst:("/unikernel." ^ target);
       ]
 
-  let spec_mirage_3 ?(target = "hvt") ?(extra_flags = "") ~opam_repository_commit ~extra_instructions
-      config_file =
+  let spec_mirage_3 ?(target = "hvt") ?(extra_flags = "")
+      ~opam_repository_commit ~extra_instructions config_file =
     let open Obuilder_spec in
     let base_path = Fpath.v "/home/opam/repo" in
     let config_file_path = Fpath.(base_path // config_file) in
@@ -166,7 +170,9 @@ module Git = struct
           run "ls && mv *.%s unikernel.%s && ls" target target;
         ]
     in
-    stage ~child_builds:[ ("build", build) ] ~from:"scratch"
+    stage
+      ~child_builds:[ ("build", build) ]
+      ~from:"scratch"
       [
         copy ~from:(`Build "build")
           [ Fpath.(v config_file_dir / ("unikernel." ^ target) |> to_string) ]
@@ -179,8 +185,8 @@ module Git = struct
 
   let build_image
       ?(extra_instructions = Current.return (fun ~network:_ ~cache:_ -> []))
-      ?(opam_repository_commit = default_opam_repository_commit)
-      ~mirage_version ~config_file ?(args = Current.return []) repo =
+      ?(opam_repository_commit = default_opam_repository_commit) ~mirage_version
+      ~config_file ?(args = Current.return []) repo =
     let spec =
       match mirage_version with
       | `Mirage_3 -> spec_mirage_3

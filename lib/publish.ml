@@ -10,7 +10,6 @@ module Published = struct
   type t = { service : string }
 
   let marshal t = t.service
-
   let unmarshal service = { service }
 end
 
@@ -69,7 +68,6 @@ module OpPublish = struct
     Lwt_result.return { Published.service }
 
   let pp f (key, _v) = Fmt.pf f "@[<v2>deploy %s@]" key.Key.service
-
   let auto_cancel = true
 end
 

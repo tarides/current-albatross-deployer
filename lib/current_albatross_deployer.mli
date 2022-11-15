@@ -65,11 +65,8 @@ module Deployed : sig
   type t
 
   val pp : t Fmt.t
-
   val marshal : t -> string
-
   val unmarshal : string -> t
-
   val digest : t -> string
 end
 
@@ -78,7 +75,6 @@ val deploy_albatross :
 (** Deploy the configuration to albatross *)
 
 val monitor : ?poll_rate:float -> Deployed.t Current.t -> Info.t Current.t
-
 val is_running : Info.t Current.t -> unit Current.t
 
 module Published : sig

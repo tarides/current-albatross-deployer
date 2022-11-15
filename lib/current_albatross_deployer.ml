@@ -8,13 +8,8 @@ module Port = Publish.Port
 module Published = Publish.Published
 
 let get_ip = Ip.get_ip
-
 let publish = Publish.publish
-
 let deploy_albatross = Albatross_deploy.deploy_albatross
-
 let monitor = Albatross_monitor.monitor
-
 let is_running = Albatross_monitor.is_running
-
 let collect = Collect.collect
