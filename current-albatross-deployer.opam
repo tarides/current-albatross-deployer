@@ -1,10 +1,12 @@
 opam-version: "2.0"
-synopsis: "A short, but powerful statement about your project"
-description: "A short, but powerful statement about your project"
-maintainer: "Lucas Pluvinage"
-authors: "Lucas Pluvinage"
-dev-repo: "git+https://github.com/tarides/current-albatross-deployer.git"
-license: "ISC"
+maintainer:   "Lucas Pluvinage"
+authors:      "Lucas Pluvinage"
+license:      "ISC"
+homepage:     "https://github.com/tarides/current-albatross-deployer"
+bug-reports:  "https://github.com/tarides/current-albatross-deployer/issues"
+dev-repo:     "git+https://github.com/tarides/current-albatross-deployer.git"
+doc:         "https://tarides.github.io/current-albatross-deployer/"
+
 depends: [
   "albatross" {>= "1.5.1"}
   "obuilder-spec" {>= "0.5"}
@@ -40,3 +42,16 @@ build: [
     "@doc" {with-doc}
   ]
 ]
+
+synopsis: """
+An ocurrent plugin to deploy MirageOS unikernels
+"""
+description: """
+This is an [ocurrent](https://github.com/ocurrent/ocurrent) plugin to manage deployment of
+unikernels. It's specialized for linux, using [Albatross](https://github.com/roburio/albatross)
+for orchestrating the virtual machines and `iptables` for exposing ports.
+
+It's been made with _zero downtime_ in mind, meaning that when an unikernel is updated, a new
+instance is started while keeping the old one alive, and the switch to the new instance is managed
+using a port redirection to the new IP.
+"""
