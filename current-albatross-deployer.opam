@@ -3,20 +3,21 @@ synopsis: "A short, but powerful statement about your project"
 description: "A short, but powerful statement about your project"
 maintainer: "Lucas Pluvinage"
 authors: "Lucas Pluvinage"
-dev-repo: "git+https://github.com/TheLortex/current-albatross-deployer.git"
+dev-repo: "git+https://github.com/tarides/current-albatross-deployer.git"
 license: "ISC"
 depends: [
   "albatross" {>= "1.5.1"}
-  "obuilder-spec"
+  "obuilder-spec" {>= "0.5"}
   "ocaml" {>= "4.08.0"}
   "dune"
   "odoc" {with-doc}
   "asn1-combinators" {>= "0.2.6"}
   "bos" {>= "0.2.0"}
-  "cmdliner" {>= "1.0.4"}
+  "cmdliner" {>= "1.1.0"}
   "cstruct" {>= "6.0.1"}
   "current" {>= "0.5"}
   "current_docker" {>= "0.5"}
+  "current_web" {with-test}
   "ipaddr" {>= "5.2.0"}
   "logs" {>= "0.7.0"}
   "lwt" {>= "5.4.2"}

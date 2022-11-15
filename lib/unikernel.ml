@@ -79,7 +79,7 @@ module Git = struct
     let build =
       stage ~from:"ocaml/opam:ubuntu-ocaml-4.11"
       @@ [
-           user ~uid:1000 ~gid:1000;
+           user_unix ~uid:1000 ~gid:1000;
            run ~network "sudo apt install -y m4 pkg-config";
            run ~network
              "cd ~/opam-repository && git pull origin master && git reset \
@@ -141,7 +141,7 @@ module Git = struct
     let build =
       stage ~from:"ocaml/opam:ubuntu-ocaml-4.11"
       @@ [
-           user ~uid:1000 ~gid:1000;
+           user_unix ~uid:1000 ~gid:1000;
            run ~network "sudo apt install -y m4 pkg-config";
            run ~network
              "cd ~/opam-repository && git pull origin master && git reset \
@@ -199,7 +199,7 @@ module Git = struct
       and+ opam_repository_commit = opam_repository_commit in
       let extra_flags = String.concat " " args in
       spec ~extra_instructions ~extra_flags ~opam_repository_commit config_file
-      |> Obuilder_spec.Docker.dockerfile_of_spec ~buildkit:true
+      |> Obuilder_spec.Docker.dockerfile_of_spec ~buildkit:true ~os:`Unix
     in
     let id =
       let+ config_file = config_file and+ repo = repo in

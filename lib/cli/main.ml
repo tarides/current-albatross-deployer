@@ -103,22 +103,26 @@ let deployment_remove =
     $ service)
 
 let () =
-  Term.(
-    exit
-    @@ eval_choice
-         Term.(const (), Term.info "iptables-cli")
-         [
-           (ip_list, Term.info ~doc:"list allocated IPs" "ip-list");
-           ( ip_query,
-             Term.info ~doc:"query a new IP associated with tag" "ip-query" );
-           (ip_free, Term.info ~doc:"free IP" "ip-free");
-           (deployment_list, Term.info ~doc:"list deployments" "deployment-list");
-           ( deployment_add,
-             Term.info
-               ~doc:
-                 "add new deployment and register port redirection. Can also \
-                  be used to update deployment."
-               "deployment-add" );
-           ( deployment_remove,
-             Term.info ~doc:"remove deployment" "deployment-remove" );
-         ])
+  let doc = Cmd.info "iptables-cli" in
+  let groups =
+    [
+      Cmd.v (Cmd.info ~doc:"list allocated IPs" "ip-list") ip_list;
+      Cmd.v
+        (Cmd.info ~doc:"query a new IP associated with tag" "ip-query")
+        ip_query;
+      Cmd.v (Cmd.info ~doc:"free IP" "ip-free") ip_free;
+      Cmd.v (Cmd.info ~doc:"list deployments" "deployment-list") deployment_list;
+      Cmd.v
+        (Cmd.info
+           ~doc:
+             "add new deployment and register port redirection. Can also be \
+              used to update deployment."
+           "deployment-add")
+        deployment_add;
+      Cmd.v
+        (Cmd.info ~doc:"remove deployment" "deployment-remove")
+        deployment_remove;
+    ]
+  in
+  let cmds = Cmd.group ~default:(Term.const ()) doc groups in
+  exit Cmd.(eval cmds)
