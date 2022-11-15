@@ -3,7 +3,7 @@ synopsis: "A short, but powerful statement about your project"
 description: "A short, but powerful statement about your project"
 maintainer: "Lucas Pluvinage"
 authors: "Lucas Pluvinage"
-dev-repo: "git+https://github.com/TheLortex/current-albatross-deployer.git"
+dev-repo: "git+https://github.com/tarides/current-albatross-deployer.git"
 license: "ISC"
 depends: [
   "albatross" {>= "1.5.1"}
