@@ -7,8 +7,3 @@
  (name test)
  (modules test)
  (libraries current-albatross-deployer current_web))
-
-(env
- (dev
-  (flags
-   (:standard -warn-error -A -w -40-4))))

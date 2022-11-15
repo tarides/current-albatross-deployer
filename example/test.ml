@@ -109,6 +109,9 @@ let main config mode =
       Current_web.run ~mode site;
     ]
   |> Lwt_main.run
+  |> function
+  | Ok _ as x -> x
+  | Error (`Msg e) -> Error e
 
 (* Command-line parsing *)
 
@@ -116,7 +119,7 @@ open Cmdliner
 
 let cmd =
   let doc = "build and deploy services from Git" in
-  ( Term.(const main $ Current.Config.cmdliner $ Current_web.cmdliner),
-    Term.info "deploy" ~doc )
+  Cmd.v (Cmd.info "deploy" ~doc)
+    Term.(const main $ Current.Config.cmdliner $ Current_web.cmdliner)
 
-let () = Term.(exit @@ eval cmd)
+let () = exit Cmd.(eval_result cmd)
