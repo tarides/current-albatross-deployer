@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>Deployments (current-albatross-deployer.Iptables_client.Deployments)</title><link rel="stylesheet" href="../../../odoc.css"/><meta charset="utf-8"/><meta name="generator" content="odoc 2.1.1"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><script src="../../../highlight.pack.js"></script><script>hljs.initHighlightingOnLoad();</script></head><body class="odoc"><nav class="odoc-nav"><a href="../index.html">Up</a> – <a href="../../index.html">current-albatross-deployer</a> &#x00BB; <a href="../index.html">Iptables_client</a> &#x00BB; Deployments</nav><header class="odoc-preamble"><h1>Module <code><span>Iptables_client.Deployments</span></code></h1></header><div class="odoc-content"><div class="odoc-spec"><div class="spec value" id="val-list" class="anchored"><a href="#val-list" class="anchor"></a><code><span><span class="keyword">val</span> list : 
+  <span>socket:<a href="../index.html#type-socket">socket</a> <span class="arrow">&#45;&gt;</span></span>
+  <span>unit <span class="arrow">&#45;&gt;</span></span>
+  <span><span><span>( <span><a href="../../Iptables_daemon_api/Types/DeploymentInfo/index.html#type-t">Iptables_daemon_api.Types.DeploymentInfo.t</a> list</span>, <a href="../index.html#type-wire_error">wire_error</a> )</span> <span class="xref-unresolved">Stdlib</span>.result</span>
+    <span class="xref-unresolved">Lwt</span>.t</span></span></code></div></div><div class="odoc-spec"><div class="spec value" id="val-create" class="anchored"><a href="#val-create" class="anchor"></a><code><span><span class="keyword">val</span> create : 
+  <span>socket:<a href="../index.html#type-socket">socket</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../Iptables_daemon_api/Types/DeploymentInfo/index.html#type-t">Iptables_daemon_api.Types.DeploymentInfo.t</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span><span>( <span><span>( unit, <span>[ <span>`Port_already_allocated of int</span> ]</span> )</span> <span class="xref-unresolved">Stdlib</span>.result</span>, <a href="../index.html#type-wire_error">wire_error</a> )</span>
+    <span class="xref-unresolved">Stdlib</span>.result</span>
+    <span class="xref-unresolved">Lwt</span>.t</span></span></code></div></div><div class="odoc-spec"><div class="spec value" id="val-remove" class="anchored"><a href="#val-remove" class="anchor"></a><code><span><span class="keyword">val</span> remove : 
+  <span>socket:<a href="../index.html#type-socket">socket</a> <span class="arrow">&#45;&gt;</span></span>
+  <span>string <span class="arrow">&#45;&gt;</span></span>
+  <span><span><span>( <span><span>( <a href="../../Iptables_daemon_api/Types/DeploymentInfo/index.html#type-t">Iptables_daemon_api.Types.DeploymentInfo.t</a>, <span>[ `Not_found ]</span> )</span>
+      <span class="xref-unresolved">Stdlib</span>.result</span>,
+    <a href="../index.html#type-wire_error">wire_error</a> )</span>
+    <span class="xref-unresolved">Stdlib</span>.result</span>
+    <span class="xref-unresolved">Lwt</span>.t</span></span></code></div></div></div></body></html>
