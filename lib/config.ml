@@ -20,6 +20,7 @@ module Pre = struct
     args : Ipaddr.V4.t -> string list;
     memory : int;
     network : string;
+    cpu : int;
   }
 
   let value_digest { unikernel; args; memory; network; _ } =
@@ -44,6 +45,7 @@ type t = {
   ip : Ipaddr.V4.t;
   memory : int;
   network : string;
+  cpu : int;
 }
 [@@deriving yojson]
 
@@ -56,4 +58,5 @@ let v (pre : Pre.t) ip =
     ip;
     memory = pre.memory;
     network = pre.network;
+    cpu = pre.cpu;
   }

@@ -42,6 +42,7 @@ module Config : sig
       args : Ipaddr.V4.t -> string list;
       memory : int;
       network : string;
+      cpu : int;
     }
     (** Configuration preparation is configuration with an additional IP
         parameter that is provided later. *)
