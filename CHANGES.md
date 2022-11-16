@@ -1,3 +1,7 @@
+# dev
+
+- Support specifying the pinned CPU in config
+
 # 1.0.0
 
 - The initial release comprises of:

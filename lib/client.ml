@@ -42,7 +42,7 @@ module Albatross = struct
     let+ () = Vmm_lwt.safe_close fd in
     Ok ()
 
-  let spawn_unikernel ~path ~name ~memory ~network ~args () =
+  let spawn_unikernel ~path ~name ~memory ~network ~cpu ~args () =
     let ( let** ) = Lwt_result.bind in
     let* buffer = Lwt_io.open_file ~mode:Input path in
     let* content =
@@ -60,7 +60,7 @@ module Albatross = struct
               compressed = false;
               image;
               fail_behaviour = `Quit;
-              cpuid = 0;
+              cpuid = cpu;
               memory;
               block_devices = [];
               bridges = [ ("service", Some network, None) ];

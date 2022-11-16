@@ -36,14 +36,15 @@ module OpDeploy = struct
       unikernel : Unikernel.t;
       args : string list;
       memory : int;
+      cpu : int;
       network : string;
     }
 
-    let digest { unikernel; args; memory; network } =
-      Fmt.str "%s|%a|%d|%s"
+    let digest { unikernel; args; memory; network; cpu } =
+      Fmt.str "%s|%a|%d|%d|%s"
         (Unikernel.digest unikernel)
         Fmt.(list ~sep:sp string)
-        args memory network
+        args memory cpu network
       |> Digest.string |> Digest.to_hex
   end
 
@@ -55,7 +56,7 @@ module OpDeploy = struct
   let docker_cp src dst = Raw.Cmd.docker [ "cp"; src; dst ]
 
   let publish No_context job { Key.name }
-      { Value.unikernel; args; memory; network } =
+      { Value.unikernel; args; memory; network; cpu } =
     let open Lwt.Syntax in
     let ( let** ) = Lwt_result.bind in
     let* () = Current.Job.start job ~level:Mostly_harmless in
@@ -83,7 +84,7 @@ module OpDeploy = struct
     (* Create the unikernel *)
     let** () =
       Client.Albatross.spawn_unikernel ~path:tmp_path ~name:vmm_unikernel_name
-        ~memory ~network ~args ()
+        ~memory ~network ~cpu ~args ()
     in
     Lwt_result.return ()
 
@@ -104,6 +105,7 @@ let deploy_albatross ?label config =
          unikernel = config.unikernel;
          args = config.args;
          memory = config.memory;
+         cpu = config.cpu;
          network = config.network;
        }
      |> Current.Primitive.map_result (function
