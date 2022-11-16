@@ -87,6 +87,8 @@ module OpCollect = struct
         List.filter
           (fun (name, _) ->
             let tag = Vmm_core.Name.to_string name in
+            (* remove the ':' prefix *)
+            let tag = String.sub tag 1 (String.length tag - 1) in
             Current.Job.log job "- %s" tag;
             StringSet.mem tag removed_ips_tags)
           unikernels
