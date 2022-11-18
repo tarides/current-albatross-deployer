@@ -7,10 +7,11 @@ module Port = struct
 end
 
 module Published = struct
-  type t = { service : string }
+  type t = { service : string; info : Albatross_deploy.Deployed.t }
+  [@@deriving yojson]
 
-  let marshal t = t.service
-  let unmarshal service = { service }
+  let marshal t = t |> to_yojson |> Yojson.Safe.to_string
+  let unmarshal s = s |> Yojson.Safe.from_string |> of_yojson |> Result.get_ok
 end
 
 module OpPublish = struct
@@ -25,16 +26,20 @@ module OpPublish = struct
   end
 
   module Value = struct
-    type t = { ports : Port.t list; ip : Ipaddr.V4.t }
+    type t = {
+      ports : Port.t list;
+      ip : Ipaddr.V4.t;
+      info : Albatross_deploy.Deployed.t;
+    }
 
-    let digest { ports; ip } =
+    let digest { ports; ip; _ } =
       Fmt.str "%a|%a" Ipaddr.V4.pp ip Fmt.(list ~sep:sp Port.pp) ports
       |> Digest.string |> Digest.to_hex
   end
 
   module Outcome = Published
 
-  let publish No_context job { Key.service } { Value.ports; ip } =
+  let publish No_context job { Key.service } { Value.ports; ip; info } =
     let open Lwt.Syntax in
     let* () = Current.Job.start job ~level:Mostly_harmless in
     Current.Job.log job
@@ -65,7 +70,7 @@ module OpPublish = struct
     in
     let** () = Lwt.return (result |> Utils.remap_errors) in
 
-    Lwt_result.return { Published.service }
+    Lwt_result.return { Published.service; info }
 
   let pp f (key, _v) = Fmt.pf f "@[<v2>deploy %s@]" key.Key.service
   let auto_cancel = true
@@ -78,4 +83,4 @@ let publish ~service ?(ports = []) info =
   Current.component "Publish %s\n%a" service Fmt.(list Port.pp) ports
   |> let> info = info in
      Publish.set No_context { service }
-       { ports; ip = info.Albatross_deploy.Deployed.config.ip }
+       { ports; ip = info.Albatross_deploy.Deployed.config.ip; info }
