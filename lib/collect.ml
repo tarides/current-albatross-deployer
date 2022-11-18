@@ -16,14 +16,16 @@ module OpCollect = struct
     let digest t =
       t
       |> List.sort (fun a b -> String.compare a.Published.service b.service)
-      |> List.map (fun d -> d.Published.service)
+      |> List.map (fun d ->
+             d.Published.service ^ ":"
+             ^ (d.info |> Albatross_deploy.Deployed.digest))
       |> String.concat "|"
   end
 
   module Value = Current.Unit
 
   let build No_context job roots =
-    let* () = Current.Job.start ~level:Dangerous job in
+    let* () = Current.Job.start ~level:Average job in
 
     let module StringSet = Set.Make (String) in
     let deployed_services =
@@ -87,7 +89,6 @@ module OpCollect = struct
         List.filter
           (fun (name, _) ->
             let tag = Vmm_core.Name.to_string name in
-            (* remove the ':' prefix *)
             let tag = String.sub tag 1 (String.length tag - 1) in
             Current.Job.log job "- %s" tag;
             StringSet.mem tag removed_ips_tags)

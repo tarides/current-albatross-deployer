@@ -21,7 +21,7 @@ module Deployed = struct
 end
 
 module OpDeploy = struct
-  type t = No_context
+  type t = Current.Level.t
 
   let id = "mirage-deploy"
 
@@ -55,11 +55,11 @@ module OpDeploy = struct
 
   let docker_cp src dst = Raw.Cmd.docker [ "cp"; src; dst ]
 
-  let publish No_context job { Key.name }
+  let publish level job { Key.name }
       { Value.unikernel; args; memory; network; cpu } =
     let open Lwt.Syntax in
     let ( let** ) = Lwt_result.bind in
-    let* () = Current.Job.start job ~level:Mostly_harmless in
+    let* () = Current.Job.start job ~level in
     Current.Job.log job "Deploy %s -> %s" (Unikernel.digest unikernel) name;
     (* Extract unikernel image from Docker image: *)
     Current.Job.log job "Extracting unikernel";
@@ -94,12 +94,12 @@ end
 
 module Deploy = Current_cache.Output (OpDeploy)
 
-let deploy_albatross ?label config =
+let deploy_albatross ?(level = Current.Level.Average) ?label config =
   let open Current.Syntax in
   let suffix = match label with None -> "" | Some v -> ": " ^ v in
   Current.component "Deploy to albatross%s" suffix
   |> let> config = config in
-     Deploy.set No_context
+     Deploy.set level
        { name = config.Config.id }
        {
          unikernel = config.unikernel;
