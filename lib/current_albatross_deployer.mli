@@ -72,7 +72,10 @@ module Deployed : sig
 end
 
 val deploy_albatross :
-  ?label:string -> Config.t Current.t -> Deployed.t Current.t
+  ?level:Current.Level.t ->
+  ?label:string ->
+  Config.t Current.t ->
+  Deployed.t Current.t
 (** Deploy the configuration to albatross *)
 
 val monitor : ?poll_rate:float -> Deployed.t Current.t -> Info.t Current.t
