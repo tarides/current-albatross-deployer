@@ -1,6 +1,7 @@
 # dev
 
 - Support specifying the pinned CPU in config
+- Build with albatross >=1.5.5
 
 # 1.0.0
 
