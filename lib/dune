@@ -9,7 +9,8 @@
   str
   iptables_client
   obuilder-spec
-  albatross)
+  albatross
+  albatross.unix)
  (preprocess
   (pps ppx_deriving.std ppx_deriving_yojson)))
 
