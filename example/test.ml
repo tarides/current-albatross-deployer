@@ -38,6 +38,7 @@ let pipeline () =
           ]);
       memory = 256;
       network = "br0";
+      cpu = 0;
     }
   in
   let config_mirage_3 =
@@ -59,6 +60,7 @@ let pipeline () =
           ]);
       memory = 256;
       network = "br0";
+      cpu = 0;
     }
   in
   let config_mirage_4 =
