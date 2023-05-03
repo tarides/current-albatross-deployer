@@ -3,7 +3,7 @@ module Published = Publish.Published
 
 let ( let** ) = Lwt_result.bind
 
-module OpCollect = struct
+module OpCollect (C : Client.S) = struct
   type t = No_context
 
   let id = "collect"
@@ -84,7 +84,7 @@ module OpCollect = struct
       Current.Job.log job "Stage 2: remove unused unikernels";
       Current.Job.log job "Live unikernels:";
       let ( let** ) = Lwt_result.bind in
-      let** unikernels = Client.Albatross.list_unikernels () in
+      let** unikernels = C.list_unikernels () in
       let unikernels_to_remove =
         List.filter
           (fun (name, _) ->
@@ -99,7 +99,7 @@ module OpCollect = struct
         Lwt_list.iter_s
           (fun (name, _) ->
             Current.Job.log job "- %a" Vmm_core.Name.pp name;
-            Client.Albatross.destroy_unikernel name |> Lwt.map ignore)
+            C.destroy_unikernel name |> Lwt.map ignore)
           unikernels_to_remove
       in
       (* Step 3: daemon: remove unused IPs *)
@@ -118,9 +118,9 @@ module OpCollect = struct
     Lwt.finalize (fun () -> perform ~socket) (fun () -> Client.close socket)
 end
 
-module Collect = Current_cache.Make (OpCollect)
-
-let collect deployments =
+let collect ?(mode = `Socket) deployments =
+  let module C = (val Client.client_of_mode mode) in
+  let module Collect = Current_cache.Make (OpCollect (C)) in
   let open Current.Syntax in
   Current.component "collect"
   |> let> deployments = deployments in

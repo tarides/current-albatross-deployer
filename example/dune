@@ -4,6 +4,11 @@
  (libraries current-albatross-deployer current_web))
 
 (executable
+ (name tls_hello)
+ (modules tls_hello)
+ (libraries current-albatross-deployer current_web prometheus-app.unix))
+
+(executable
  (name test)
  (modules test)
  (libraries current-albatross-deployer current_web))

@@ -70,7 +70,7 @@ let repo: Git.Commit.t Current.t = Git.clone "https://github.com/mirage/mirage-w
 
 let unikernel: Unikernel.t Current.t =
     let mirage_version = `Mirage_3 in
-    let config_file = Fpath.v "/src/config.ml" in
+    let config_file = Fpath.v "src/config.ml" in
     Unikernel.of_git ~mirage_version ~config_file repo
 ```
 
@@ -86,6 +86,7 @@ let config_pre: Config.Pre.t Current.t =
         args = (fun ip -> ["--ipv4="^(Ipaddr.V4.to_string ip)^"/24"]);
         memory = 256;
         network = "br0";
+        cpu = 0;
     }
 ```
 Note that the `let+` operator from `Current.Syntax` allowing to map an `Unikernel.t` to its pre-configuration.

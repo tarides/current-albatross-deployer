@@ -7,6 +7,14 @@ module Info = Albatross_monitor.Info
 module Port = Publish.Port
 module Published = Publish.Published
 
+type tls_config = Client.tls_config = {
+  host : string;
+  port : int;
+  ca : string;
+  ca_key : string;
+  server_ca : string;
+}
+
 let get_ip = Ip.get_ip
 let publish = Publish.publish
 let deploy_albatross = Albatross_deploy.deploy_albatross

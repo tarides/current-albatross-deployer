@@ -41,7 +41,7 @@ module Config : sig
       unikernel : Unikernel.t;
       args : Ipaddr.V4.t -> string list;
       memory : int;
-      network : string;
+      network : string option;
       cpu : int;
     }
     (** Configuration preparation is configuration with an additional IP
@@ -71,12 +71,21 @@ module Deployed : sig
   val digest : t -> string
 end
 
+type tls_config = Client.tls_config = {
+  host : string;
+  port : int;
+  ca : string;
+  ca_key : string;
+  server_ca : string;
+}
+
 val deploy_albatross :
   ?level:Current.Level.t ->
   ?label:string ->
+  ?mode:[ `Socket | `Tls of tls_config ] ->
   Config.t Current.t ->
   Deployed.t Current.t
-(** Deploy the configuration to albatross *)
+(** Deploy the configuration to the albatross daemon *)
 
 val monitor : ?poll_rate:float -> Deployed.t Current.t -> Info.t Current.t
 val is_running : Info.t Current.t -> unit Current.t
@@ -92,6 +101,9 @@ val publish :
   Published.t Current.t
 (** Publish a service, optionally exposing ports to the deployed unikernel *)
 
-val collect : Published.t list Current.t -> unit Current.t
+val collect :
+  ?mode:[ `Socket | `Tls of tls_config ] ->
+  Published.t list Current.t ->
+  unit Current.t
 (** Garbage collect IPs and deployments managed by current-albatross-deployer
     and kill corresponding unikernels. Only specified deployments are kept. *)

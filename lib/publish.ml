@@ -53,7 +53,10 @@ module OpPublish = struct
               { Iptables_daemon_api.Types.PortRedirection.source; target })
         ports
     in
-    let* socket = Client.connect () in
+    let** socket =
+      Utils.catch_as_msg "exception when connecting to iptables daemon"
+        (Client.connect ())
+    in
     let** result =
       Lwt.finalize
         (fun () ->

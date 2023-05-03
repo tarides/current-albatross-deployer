@@ -7,12 +7,12 @@ let pipeline () =
   let src_mirage_4 =
     Git.clone
       ~schedule:(Current_cache.Schedule.v ~valid_for:(Duration.of_hour 1) ())
-      ~gref:"next" "https://github.com/TheLortex/mirage-www.git"
+      ~gref:"master" "https://github.com/mirage/mirage-www.git"
   in
   let src_mirage_3 =
     Git.clone
       ~schedule:(Current_cache.Schedule.v ~valid_for:(Duration.of_hour 1) ())
-      ~gref:"master" "https://github.com/mirage/mirage-skeleton.git"
+      ~gref:"mirage-3" "https://github.com/mirage/mirage-skeleton.git"
   in
   let get_ip =
     Deployer.get_ip
@@ -22,7 +22,7 @@ let pipeline () =
   let config_mirage_4 =
     let+ unikernel =
       Deployer.Unikernel.of_git ~mirage_version:`Mirage_4
-        ~config_file:(Current.return (Fpath.v "src/config.ml"))
+        ~config_file:(Current.return (Fpath.v "mirage/config.ml"))
         src_mirage_4
     in
     {
@@ -37,7 +37,8 @@ let pipeline () =
             "error";
           ]);
       memory = 256;
-      network = "br0";
+      network = Some "br0";
+      cpu = 0;
     }
   in
   let config_mirage_3 =
@@ -58,7 +59,8 @@ let pipeline () =
             "error";
           ]);
       memory = 256;
-      network = "br0";
+      network = Some "br0";
+      cpu = 0;
     }
   in
   let config_mirage_4 =

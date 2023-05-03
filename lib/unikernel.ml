@@ -99,8 +99,8 @@ module Git = struct
              [ Fpath.to_string config_file ]
              ~dst:config_file_name;
            run ~cache
-             "opam config exec -- mirage configure -f %s -o unikernel -t %s %s \
-              --extra-repo \
+             "opam config exec -- mirage configure -f %s -o unikernel_gen -t \
+              %s %s --extra-repo \
               https://github.com/mirage/opam-overlays.git#f033f8b770097e768cc974cc407e0cd6d7889d63"
              config_file_name target extra_flags;
          ]
@@ -109,8 +109,8 @@ module Git = struct
           run ~network ~cache "opam config exec -- make depend";
           copy ~from:`Context [ "./" ] ~dst:(Fpath.to_string base_path);
           run ~cache
-            "opam config exec -- mirage configure -f %s -o unikernel -t %s %s \
-             --extra-repo \
+            "opam config exec -- mirage configure -f %s -o unikernel_gen -t %s \
+             %s --extra-repo \
              https://github.com/mirage/opam-overlays.git#f033f8b770097e768cc974cc407e0cd6d7889d63"
             config_file_name target extra_flags;
           run ~cache "opam config exec -- mirage build";
@@ -123,9 +123,10 @@ module Git = struct
         copy ~from:(`Build "build")
           [
             Fpath.(
-              v config_file_dir / "dist" / ("unikernel." ^ target) |> to_string);
+              v config_file_dir / "dist" / ("unikernel_gen." ^ target)
+              |> to_string);
           ]
-          ~dst:("/unikernel." ^ target);
+          ~dst:("/unikernel_gen." ^ target);
       ]
 
   let spec_mirage_3 ?(target = "hvt") ?(extra_flags = "")
@@ -167,7 +168,7 @@ module Git = struct
           run ~cache "opam config exec -- mirage configure -f %s -t %s %s"
             config_file_name target extra_flags;
           run ~cache "opam config exec -- make";
-          run "ls && mv *.%s unikernel.%s && ls" target target;
+          run "ls && mv *.%s unikernel_gen.%s && ls" target target;
         ]
     in
     stage
@@ -175,8 +176,10 @@ module Git = struct
       ~from:"scratch"
       [
         copy ~from:(`Build "build")
-          [ Fpath.(v config_file_dir / ("unikernel." ^ target) |> to_string) ]
-          ~dst:("/unikernel." ^ target);
+          [
+            Fpath.(v config_file_dir / ("unikernel_gen." ^ target) |> to_string);
+          ]
+          ~dst:("/unikernel_gen." ^ target);
       ]
 
   let digest ~config_file repo =
@@ -221,7 +224,7 @@ module Git = struct
     let+ image =
       Current_docker.Default.build ~dockerfile ~pull:false (`Git repo)
     in
-    { location = Fpath.v "/unikernel.hvt"; image }
+    { location = Fpath.v "/unikernel_gen.hvt"; image }
 end
 
 type instruction_fn =
