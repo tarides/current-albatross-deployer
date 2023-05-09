@@ -10,6 +10,8 @@ let monitor ?(poll_rate = 10.)
   Current.component "Monitor status"
   |> let> deployment = deployment in
      let config = deployment.config in
+     let mode = deployment.mode in
+     let module C = (val Client.client_of_mode mode) in
      let name = config.id in
      let vmm_name = Vmm_core.Name.of_string name |> Result.get_ok in
      let ip = config.ip in
@@ -24,7 +26,7 @@ let monitor ?(poll_rate = 10.)
        let open Lwt.Syntax in
        let stop = Lwt_condition.create () in
        let rec loop () =
-         let* unikernel_info = Client.Albatross.show_unikernel vmm_name in
+         let* unikernel_info = C.show_unikernel vmm_name in
          match unikernel_info with
          | Ok [ (_, _info) ] ->
              set_and_refresh `Running refresh;
@@ -34,7 +36,10 @@ let monitor ?(poll_rate = 10.)
              set_and_refresh `Exited refresh;
              let* () = Lwt_unix.sleep poll_rate in
              loop ()
-         | _ -> Lwt.return_unit
+         | _ ->
+             (* on connection error, retry *)
+             let* () = Lwt_unix.sleep poll_rate in
+             loop ()
        in
 
        Lwt.async (fun () -> Lwt.pick [ Lwt_condition.wait stop; loop () ]);

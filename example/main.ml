@@ -37,7 +37,8 @@ let pipeline () =
             "error";
           ]);
       memory = 256;
-      network = "br0";
+      network = Some "br0";
+      cpu = 0;
     }
   in
   let ip_forward = get_ip config_forward in
@@ -61,7 +62,8 @@ let pipeline () =
             (*fake stuff here*);
           ]);
       memory = 256;
-      network = "br0";
+      network = Some "br0";
+      cpu = 0;
     }
   in
   let ip_signer = get_ip config_signer in
@@ -86,7 +88,8 @@ let pipeline () =
             (*fake stuff here*)
           ]);
       memory = 256;
-      network = "br0";
+      network = Some "br0";
+      cpu = 0;
     }
   in
   let ip_entry = get_ip config_entry in

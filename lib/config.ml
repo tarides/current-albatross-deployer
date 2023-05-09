@@ -19,16 +19,18 @@ module Pre = struct
     unikernel : Unikernel.t;
     args : Ipaddr.V4.t -> string list;
     memory : int;
-    network : string;
+    network : string option;
     cpu : int;
   }
 
   let value_digest { unikernel; args; memory; network; _ } =
     let args = args (Ipaddr.V4.of_string_exn "0.0.0.0") in
-    Fmt.str "%s|%a|%d|%s"
+    Fmt.str "%s|%a|%d|%a"
       (Unikernel.digest unikernel)
       Fmt.(list ~sep:sp string)
-      args memory network
+      args memory
+      Fmt.(option string)
+      network
     |> Digest.string |> Digest.to_hex
 
   let id t =
@@ -44,7 +46,7 @@ type t = {
   id : string;
   ip : Ipaddr.V4.t;
   memory : int;
-  network : string;
+  network : string option;
   cpu : int;
 }
 [@@deriving yojson]
